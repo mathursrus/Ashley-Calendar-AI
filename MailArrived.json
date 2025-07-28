@@ -1,0 +1,484 @@
+{
+  "name": "MailArrived",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "sender": ""
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -840,
+        -60
+      ],
+      "id": "18f4b4a1-f1f5-46f6-83e9-b671819742d9",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "l6FLmcnty93cD3Zw",
+          "name": "Ashley Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "sid.mathur@gmail.com",
+          "mode": "list",
+          "cachedResultName": "sid.mathur@gmail.com"
+        },
+        "returnAll": true,
+        "timeMin": "={{ $json.timerange_start }}",
+        "timeMax": "={{ $json.timerange_end }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        40,
+        -340
+      ],
+      "id": "99cc5bc4-f6cd-4499-b26d-b96825699204",
+      "name": "Get many events",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "LFlgMde9BXmD8Wd0",
+          "name": "Sids Google Calendar"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are my calendar assistant. Today is {{ new Date().toDateString() }}.\n\nIs the context of this conversation related to finding a common meeting time? Respond in the following format\n\n{\n  \"action_needed\": <boolean, true if we need to find a common meeting time, false if not>,\n  \"request_type\": \"<string, \"does_time_work\" if specific meetting times are suggested in the conversation, \"suggest_time\" if the conversation is requesting that you suggest specific time slots, \"book_time\" if the conversation is requesting to book the time>,\n  time_details: \"<string, specific context related to the request>\",\n  timerange_start: \"<string, the earliest datetime being considered for the meeting>\"\n  timerange_end: \"<Date, the latest datetime being considered for the meeting>\"\n}\n\nDo not output anything other than this well formatted JSON.\n\nHere is the conversation:\nSubject: \n {{ $('Gmail Trigger').item.json.Subject }}\nBody: {{ $('Gmail Trigger').item.json.snippet }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -420,
+        -80
+      ],
+      "id": "67f70034-bdd4-4544-beef-409c30b218e8",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -480,
+        160
+      ],
+      "id": "0238349f-1f0a-4b7f-9b34-c4531bd29c71",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "3TzaS2wjqJrAozWL",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  return {\n    json: JSON.parse(item.json.output)\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        -80
+      ],
+      "id": "ae7fedda-7917-43b2-b80e-7f614b352ee0",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e812b0a3-e598-4e1d-9eb0-ed15889627a5",
+              "leftValue": "={{ $json.action_needed }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        -80
+      ],
+      "id": "ea6fbacf-e2e1-4091-8a4e-74cfd8965fda",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are Ashely, the personal calendar assistant to Sid. You are responding to the person who needs time with Sid (or who Sid needs time with) with courtesy and empathy. Address the person by their first name. Be clear and concise in your responses. **DO NOT** share any information about Sid's calendar other than acceptable times. If the schedule necessitates searching over multiple dates, include tables for easy consumption. Sign off with the signature \"Best Regards, Ashley, Sid's Personal AI Assistant\". Author your response in HTML.\n\nSearch through Sid's availability using the Calendar tool.\nReply to the user using the Gmail Tool. If and only if the user's request type is book_time, and that specific time is available, go ahead and book it using the Calendar Tool, else let the user know about alternates. **DO NOT** book time on calendars if the time is not confirmed to be good for both. Always reply back to the user using the Gmail tool.\n\nToday is {{ new Date() }}.\n\nI am providing you with the user's request details. \n\nRequest From: {{ $('Gmail Trigger').item.json.From }}\nRequest Type: {{ $('Code').item.json.request_type }}\nRequest: {{ $('Code').item.json.time_details }}\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        180,
+        -80
+      ],
+      "id": "f224eb0d-ede4-444e-bd18-5c6cc3970dc0",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "schedule",
+        "include": "specifiedFields",
+        "fieldsToInclude": "summary, start, end, creator",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        200,
+        -340
+      ],
+      "id": "1bd44d62-ae6a-450e-b34d-c73e6ab697dd",
+      "name": "Aggregate",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        160,
+        120
+      ],
+      "id": "cb36b888-f9d9-42c3-a223-e190007c9a4a",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "3TzaS2wjqJrAozWL",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are my personal calendar assistant. Please suggest available times based on the request and my existing scheduled events.\n\nRespond in the following format:\n{\n   available_slots:[\n     {\n        start_time: <string, date and local start time for available slot>\n        end_time: <string, date and local end time for available slot>\n     },\n     .....\n   ]\n}\n\nDo not output anything other than this JSON.\n\nRequest:  {{ $('Code').item.json.time_details }}\n\nSchedule: {{ $json.schedule.toJsonString() }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -340,
+        -360
+      ],
+      "id": "1b99d090-14fa-454a-a810-6962a6d52765",
+      "name": "AI Agent3"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        260
+      ],
+      "id": "9de269fc-7490-4ccb-9b3a-4e6ade84d022",
+      "name": "Reply to a message in Gmail",
+      "webhookId": "bcceb96a-9103-4769-9a0a-3bff9dcfe286",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "l6FLmcnty93cD3Zw",
+          "name": "Ashley Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "sid.mathur@gmail.com",
+          "mode": "list",
+          "cachedResultName": "sid.mathur@gmail.com"
+        },
+        "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start', ``, 'string') }}",
+        "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End', ``, 'string') }}",
+        "additionalFields": {
+          "attendees": [
+            "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('attendees0_Attendees', ``, 'string') }}"
+          ],
+          "description": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Description', ``, 'string') }}",
+          "summary": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Summary', ``, 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        400,
+        240
+      ],
+      "id": "63f8cd61-fbfc-469c-a725-accf5d640fd6",
+      "name": "Create an event in Google Calendar",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "LFlgMde9BXmD8Wd0",
+          "name": "Sids Google Calendar"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "sid.mathur@gmail.com",
+          "mode": "list",
+          "cachedResultName": "sid.mathur@gmail.com"
+        },
+        "returnAll": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Return_All', ``, 'boolean') }}",
+        "timeMin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('After', ``, 'string') }}",
+        "timeMax": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Before', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        560,
+        240
+      ],
+      "id": "c1fb3581-2921-4322-8532-507d1c224b22",
+      "name": "Get many events in Google Calendar",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "LFlgMde9BXmD8Wd0",
+          "name": "Sids Google Calendar"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "66be83d1-1555-4ef9-b67f-4431a50ec225",
+              "leftValue": "={{ $json.From }}",
+              "rightValue": "ashley.sidsai@gmail.com",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -660,
+        -60
+      ],
+      "id": "9c067c9b-4e7f-47d1-9519-b55076ed31e2",
+      "name": "If"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many events": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        []
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        []
+      ]
+    },
+    "Reply to a message in Gmail": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create an event in Google Calendar": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many events in Google Calendar": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "8dc7c1ef-63d2-4020-b2fc-4e773277cdc4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "617ae5ca711d221757e21f169809b1f528562a8e72f2a8aca107d2e9922468db"
+  },
+  "id": "KnGcoAtMUtw8uaOe",
+  "tags": []
+}
