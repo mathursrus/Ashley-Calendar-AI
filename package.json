@@ -10,7 +10,7 @@
     "test:coverage": "jest --coverage",
     "test-baml": "ts-node test-baml.ts",
     "dev": "baml dev",
-    "generate": "baml generate",
+    "generate": "npx baml-cli generate",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix"
   },
@@ -25,6 +25,7 @@
   "author": "Ashley Calendar AI",
   "license": "MIT",
   "devDependencies": {
+    "@boundaryml/baml": "^0.202.1",
     "@types/jest": "^29.5.8",
     "@types/node": "^20.8.10",
     "@typescript-eslint/eslint-plugin": "^6.9.1",
@@ -36,7 +37,6 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
-    "@boundaryml/baml": "^0.202.1",
     "dotenv": "^16.6.1"
   },
   "jest": {

@@ -25,7 +25,7 @@ import { DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIME } from "./
 export default class TypeBuilder {
     private tb: _TypeBuilder;
     
-    CalendarIntent: ClassViewer<'CalendarIntent', "action_needed" | "request_type" | "requestor" | "time_slots_requested" | "meeting_duration" | "timerange_start" | "timerange_end" | "participants" | "executive_assistants" | "other_context" | "date_of_request">;
+    CalendarIntent: ClassViewer<'CalendarIntent', "action_needed" | "request_type" | "requestor" | "time_slots_requested" | "meeting_duration" | "timerange_start" | "timerange_end" | "participants" | "executive_assistants" | "silent_observers" | "other_context" | "date_of_request">;
     
     
     RequestType: EnumViewer<'RequestType', "DoesTimeWork" | "SuggestTime" | "BookTime">;
@@ -43,7 +43,7 @@ export default class TypeBuilder {
         });
         
         this.CalendarIntent = this.tb.classViewer("CalendarIntent", [
-          "action_needed","request_type","requestor","time_slots_requested","meeting_duration","timerange_start","timerange_end","participants","executive_assistants","other_context","date_of_request",
+          "action_needed","request_type","requestor","time_slots_requested","meeting_duration","timerange_start","timerange_end","participants","executive_assistants","silent_observers","other_context","date_of_request",
         ]);
         
         

@@ -74,6 +74,10 @@ export namespace partial_types {
        */
       executive_assistants?: string | null
       /**
+       * Who are the silent observers - list of email addresses. 
+       */
+      silent_observers?: string | null
+      /**
        * Any additional context for the meeting
        */
       other_context?: string | null

@@ -32,6 +32,9 @@ class CalendarIntent {
   /// Who are the EAs and for who - email address of EA (email address of participant). Do not include Ashley (ashley.sidsai@gmail.com)
   executive_assistants string
   
+  /// Who are the silent observers - list of email addresses. 
+  silent_observers string
+  
   /// Any additional context for the meeting
   other_context string
   
@@ -51,13 +54,32 @@ function ExtractCalendarIntent(email_thread: string) -> CalendarIntent {
     # The provided email thread contains information about the sender, recipients, subject, content. It also contains date each message was sent - recent responses are at the top of the thread. 
     #
     # ***PARTICIPANTS***
-    # Any meeting request should include meeting participants. If the participant is not clear, assume the sender of the mail is the participant. 
-    # The meeting request thread may also include EAs (executive assistants). Do your best to distinguish EAs from the participants. EAs do not need to be invited to meetings, but they will help confirm meeting times for their participants. 
-    # 
+    # Any meeting request should include meeting participants. At the same time, not every person in the thread has to be a participant. 
+    # If the mail clearly lists out participants, use that list. If the participant is not clear, assume the sender of the mail is the participant. 
+    # The meeting request could have 2 additional classes of people:
+    # 1. EAs: people who are not invited to the meeting, but are helping with the meeting. If the requestor is requesting on behalf of someone else and does not ask to be part of the meeting, chances are they are an EA.
+    # 2. Silent Observers: people who are on the thread, but are not asked to be invited to the meeting. They are not helping with the meeting, and are not interested in the meeting.
+    # EAs and Silent Observers are not participants.
+    #
     # ***BE DELIBERATE AND THOUGHTFUL WHILE INTERPRETING TIMES***
     # Treat all dates in pacific time zone, unless otherwise specified. If another time zone is specified, convert all mentions of dates to pacific time zone before procceding. Your responses should only contain pacific time zone.
-    # The working week starts Monday and ends Friday. Today falls into the current week. Next week starts on the following Monday. 
-    # Be aware of the date the meeting request was made since it will help you understand the context of the meeting request. (eg) "next week" is relative to the date the meeting request was made.
+    # The working week starts Monday and ends Friday. 
+    # 
+    # ***CRITICAL DATE INTERPRETATION RULES***
+    # - Use the email date as the absolute reference point for all relative date expressions
+    # - "next week" means the week starting the Monday after the email date
+    # - "this week" means the week containing the email date
+    # - "tomorrow" means the day after the email date
+    # - "next Monday" means the Monday after the email date
+    # - "next Tuesday" means the Tuesday after the email date (could be same week or next week)
+    # - Always calculate relative dates based on the email date, not the current date
+    # - For ambiguous expressions like "next week", always interpret as the full week (Monday-Friday) starting the Monday after the email date
+    # - When a specific day is mentioned (e.g., "next Wednesday"), calculate which Wednesday that refers to based on the email date
+    #
+    # Example: If email date is 2025-07-28 (Monday), then:
+    # - "next week" = 2025-08-04 to 2025-08-08 (Monday-Friday)
+    # - "next Wednesday" = 2025-07-30 (same week)
+    # - "next Monday" = 2025-08-04 (next week)
     #
     # ***OUTPUT FORMAT***
     # {{ ctx.output_format }}
@@ -66,16 +88,20 @@ function ExtractCalendarIntent(email_thread: string) -> CalendarIntent {
     # - Set action_needed to true if and only if there is a request for Sid's calendar *AND* Ashley needs to take action.
     # - If action_needed is false, set request_type to "SuggestTime" and all other fields can be empty strings
     # - If action_needed is true, closely examine the request to determine the request type. 
-    #   * If no time slots are mentioned, request_type should be SuggestTime.
+    #   * If and only if no timing constraints are mentioned and Ashley is being asked to suggest times on Sid's calendar, request_type should be SuggestTime.
     #   * If time slots are mentioned and Ashley is being asked to check if a time works, request_type should be DoesTimeWork.
     #   * If time slots are mentioned and Ashley is being asked to book a time, request_type should be BookTime.
-    # - If action_needed is true, timerange_start and timerange_end are required. Fill in the other fields based on request_type:
+    # - If action_needed is true, timerange_start and timerange_end are required. timerange_start is the earliest time the meeting can start, and timerange_end is the latest time the meeting can end. Fill in the other fields based on request_type:
     #   * DoesTimeWork: time_slots_requested, meeting_duration are required
-    #   * SuggestTime: all others fields are optional
+    #   * SuggestTime: all fields are required
     #   * BookTime: all fields are required
-    # - All dates MUST be in YYYY-mm-dd hh:mm format and in pacific time zone
+    # - All times in time_slots_requested, timerange_start, timerange_end MUST be in YYYY-mm-dd hh:mm format and in pacific time zone
+    # - All dates in date_of_request MUST be in YYYY-mm-dd format and in pacific time zone
+    # - All meeting durations MUST be in the format of "X minutes"
     # - Participants MUST be email addresses, MUST NOT include Sid (sid.mathur@gmail.com)
     # - Executive_assistants MUST be email addresses,MUST NOT include Ashley (ashley.sidsai@gmail.com)
+    # - Silent Observers MUST be email addresses, MUST NOT be included in participants or executive_assistants
+    # - All email lists (participants, executive_assistants, silent_observers) MUST be comma-separated WITHOUT spaces (e.g., "email1@domain.com,email2@domain.com")
     #
     # Here is the full conversation thread:
     # 

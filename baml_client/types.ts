@@ -91,6 +91,10 @@ export interface CalendarIntent {
    */
   executive_assistants: string
   /**
+   * Who are the silent observers - list of email addresses. 
+   */
+  silent_observers: string
+  /**
    * Any additional context for the meeting
    */
   other_context: string
