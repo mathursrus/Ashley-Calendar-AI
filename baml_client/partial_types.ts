@@ -20,7 +20,7 @@ $ pnpm add @boundaryml/baml
 
 import type { Image, Audio, Pdf, Video } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
-import type {  CalendarIntent,  RequestType } from "./types"
+import type {  AshleyAction,  AshleyResponse,  CalendarIntent } from "./types"
 import type * as types from "./types"
 
 /******************************************************************************
@@ -36,35 +36,57 @@ export interface StreamState<T> {
 }
 
 export namespace partial_types {
+    export interface AshleyResponse {
+      /**
+       * The action Ashley should take
+       */
+      action?: types.AshleyAction | null
+      /**
+       * Notes about any conflicts found in the calendar intent
+       */
+      conflict_notes?: string | null
+      /**
+       * The email response Ashley should send to the requestor
+       */
+      email_response?: string | null
+      /**
+       * Whether a calendar invite should be sent
+       */
+      send_calendar_invite?: boolean | null
+      /**
+       * Subject line for the calendar invite (if applicable)
+       */
+      calendar_invite_subject?: string | null
+      /**
+       * Meeting start time in YYYY-mm-dd hh:mm format (Pacific Time)
+       */
+      meeting_start_time?: string | null
+      /**
+       * Meeting end time in YYYY-mm-dd hh:mm format (Pacific Time)
+       */
+      meeting_end_time?: string | null
+      /**
+       * Meeting duration in minutes
+       */
+      meeting_duration_minutes?: number | null
+      /**
+       * List of participants to invite (comma-separated email addresses)
+       */
+      participants_to_invite?: string | null
+      /**
+       * Meeting description/agenda
+       */
+      meeting_description?: string | null
+    }
     export interface CalendarIntent {
       /**
        * Whether this message requires a calendar action
        */
       action_needed?: boolean | null
       /**
-       * Type of calendar request
-       */
-      request_type?: types.RequestType | null
-      /**
        * Name of person who originally requested the meeting
        */
       requestor?: string | null
-      /**
-       * What time slots are suggested
-       */
-      time_slots_requested?: string | null
-      /**
-       * How long is being requested (e.g., "30 mins", "1 hour", "2 hours")
-       */
-      meeting_duration?: string | null
-      /**
-       * The earliest datetime being considered for the meeting formatted as YYYY-mm-dd hh:mm
-       */
-      timerange_start?: string | null
-      /**
-       * The latest datetime being considered for the meeting formatted as YYYY-mm-dd hh:mm
-       */
-      timerange_end?: string | null
       /**
        * Who needs to be included in the meeting - list of email addresses. Do not include Sid (sid.mathur@gmail.com)
        */
@@ -78,12 +100,16 @@ export namespace partial_types {
        */
       silent_observers?: string | null
       /**
-       * Any additional context for the meeting
+       * The earliest datetime being considered for the meeting formatted as YYYY-mm-dd hh:mm
        */
-      other_context?: string | null
+      timerange_start?: string | null
       /**
-       * Date of the request
+       * The latest datetime being considered for the meeting formatted as YYYY-mm-dd hh:mm
        */
-      date_of_request?: string | null
+      timerange_end?: string | null
+      /**
+       * What the requestor is asking for
+       */
+      request_details?: string | null
     }
 }

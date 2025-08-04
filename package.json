@@ -5,10 +5,8 @@
   "main": "dist/run-test.js",
   "scripts": {
     "build": "tsc",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "test-baml": "ts-node test-baml.ts",
+    "test-intent": "ts-node test-intent.ts",
+    "test-ashley": "ts-node test-ashley.ts",
     "dev": "baml dev",
     "generate": "npx baml-cli generate",
     "lint": "eslint src/**/*.ts",
@@ -25,7 +23,7 @@
   "author": "Ashley Calendar AI",
   "license": "MIT",
   "devDependencies": {
-    "@boundaryml/baml": "^0.202.1",
+    "@boundaryml/baml": "^0.203.1",
     "@types/jest": "^29.5.8",
     "@types/node": "^20.8.10",
     "@typescript-eslint/eslint-plugin": "^6.9.1",

@@ -1,0 +1,1111 @@
+{
+  "name": "Ashley Logic",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  return {\n    json: JSON.parse(item.json.output)\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -200,
+        340
+      ],
+      "id": "ae7fedda-7917-43b2-b80e-7f614b352ee0",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-3-5-sonnet-20240620",
+          "mode": "list",
+          "cachedResultName": "Claude Sonnet 3.5 (Old)"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        -180,
+        180
+      ],
+      "id": "a2595058-1570-4f57-a1a2-6fc3f09f6016",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "7Em6K0btoh2tpA8C",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"action_needed\": \"bool\",\n  \"requestor\": \"string\",\n  \"participants\": \"string\",\n  \"executive_assistants\": \"string\",\n  \"silent_observers\": \"string\",\n  \"timerange_start\": \"string\",\n  \"timerange_end\": \"string\",\n  \"request_details\": \"string\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        120
+      ],
+      "id": "570174c1-9ae5-4451-9e65-b2f262dbbd93",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-3-5-sonnet-20240620",
+          "mode": "list",
+          "cachedResultName": "Claude Sonnet 3.5 (Old)"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        660,
+        160
+      ],
+      "id": "4b82532c-327d-4a1c-9b62-12e34dba2d8c",
+      "name": "Anthropic Chat Model1",
+      "credentials": {
+        "anthropicApi": {
+          "id": "7Em6K0btoh2tpA8C",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"action_needed\": \"bool\",\n  \"requestor\": \"string\",\n  \"participants\": \"string\",\n  \"executive_assistants\": \"string\",\n  \"silent_observers\": \"string\",\n  \"timerange_start\": \"string\",\n  \"timerange_end\": \"string\",\n  \"request_details\": \"string\"\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        820,
+        160
+      ],
+      "id": "69ae2e28-3776-4527-8630-e90bc303ec26",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        480,
+        -60
+      ],
+      "id": "8213c3d3-6622-48fa-b54e-6e282717d28c",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "sender": ""
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -840,
+        -60
+      ],
+      "id": "18f4b4a1-f1f5-46f6-83e9-b671819742d9",
+      "name": "New Email to Ashley",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "l6FLmcnty93cD3Zw",
+          "name": "Ashley Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://gmail.googleapis.com/gmail/v1/users/me/messages/{{ $json.id }}?format=full",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -700,
+        -60
+      ],
+      "id": "2446eae1-1627-434a-bb19-786bf27bf75f",
+      "name": "Get full email",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "l6FLmcnty93cD3Zw",
+          "name": "Ashley Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "function decodeBase64(str) {\n  return Buffer.from(str.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf-8');\n}\n\nfunction extractPlainText(payload) {\n  if (!payload) return '[No payload]';\n\n  if (payload.parts) {\n    for (const part of payload.parts) {\n      if (part.mimeType === 'text/plain' && part.body?.data) {\n        return decodeBase64(part.body.data);\n      }\n      if (part.parts) {\n        for (const nested of part.parts) {\n          if (nested.mimeType === 'text/plain' && nested.body?.data) {\n            return decodeBase64(nested.body.data);\n          }\n        }\n      }\n    }\n  }\n\n  if (payload.body?.data) {\n    return decodeBase64(payload.body.data);\n  }\n\n  return '[No readable plain text found]';\n}\n\nfunction cleanText(text) {\n  if (!text || typeof text !== 'string') return text;\n\n  return text\n    // Remove <https://...> style links\n    .replace(/<https?:\\/\\/[^>\\s]+>/gi, '')\n    // Collapse any long repeated newlines\n    .replace(/\\r?\\n\\s*\\r?\\n\\s*\\r?\\n/g, '\\n\\n')\n    // Optional: collapse indented lines or quote markers\n    .replace(/^>\\s*/gm, '')\n    .replace(/>>/g, '')\n    .trim();\n}\n\nreturn $input.all().map(item => {\n  const payload = item.json.payload;\n  const rawText = extractPlainText(payload);\n  const cleanedText = cleanText(rawText);\n\n  return {\n    json: {\n      From: $('New Email to Ashley').first().json.From,\n      To: $('New Email to Ashley').first().json.To,\n      Cc: $('New Email to Ashley').first().json.Cc,\n      internalDate: $('New Email to Ashley').first().json.internalDate,\n      Subject: $('New Email to Ashley').first().json.Subject,\n      snippet: cleanedText\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -560,
+        -60
+      ],
+      "id": "aa44a146-db6d-4b4c-aec5-f58104547cd0",
+      "name": "Reconstruct body"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "66be83d1-1555-4ef9-b67f-4431a50ec225",
+              "leftValue": "={{ $json.From }}",
+              "rightValue": "ashley.sidsai@gmail.com",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -400,
+        -60
+      ],
+      "id": "9c067c9b-4e7f-47d1-9519-b55076ed31e2",
+      "name": "Don't respond to self"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=# ***YOUR GOAL***\n    # You are being provided with an email thread. Your job is to determine whether this email thread requires action on the part of Ashley, Sid's calendar assistant. \n    # Understand the full context of the thread to determine whether Ashley needs to take an action. If so, help Ashley with understanding the context of the action they need to take. \n    # If Ashley does not need to take any action, you don't need to provide additional context.\n    #\n    # ***CONTEXT CAPTURE***\n    # When extracting request_details, capture the FULL context including:\n    # - What times/dates DON'T work and why (constraints)\n    # - What times/dates DO work (availability)\n    # - The current proposal or request\n    # - Any preferences or requirements mentioned\n    # This helps Ashley make informed decisions about suggesting alternatives.\n    #\n    # ***CONTEXT***\n    # The provided email thread contains information about the sender, recipients, subject, content. It also contains date each message was sent - recent responses are at the top of the thread. \n    #\n    # ***PARTICIPANTS***\n    # Any meeting request should include meeting participants. At the same time, not every person in the thread has to be a participant. \n    # If the mail clearly lists out participants, use that list. If the participant is not clear, assume the sender of the mail is the participant. \n    # The meeting request could have 2 additional classes of people:\n    # 1. EAs: people who are not invited to the meeting, but are helping with the meeting. If the requestor is requesting on behalf of someone else and does not ask to be part of the meeting, chances are they are an EA.\n    # 2. Silent Observers: people who are on the thread, but are not asked to be invited to the meeting. They are not helping with the meeting, and are not interested in the meeting.\n    # EAs and Silent Observers are not participants.\n    #\n    # ***BE DELIBERATE AND THOUGHTFUL WHILE INTERPRETING TIMES***\n    # Treat all dates in pacific time zone, unless otherwise specified. If another time zone is specified, convert all mentions of dates to pacific time zone before procceding. Your responses should only contain pacific time zone.\n    # The working week starts Monday and ends Friday. \n    # \n    # ***CRITICAL DATE INTERPRETATION RULES***\n    # - Use the email date as the absolute reference point for all relative date expressions\n    # - \"next week\" means the week starting the Monday after the email date\n    # - \"this week\" means the week containing the email date\n    # - \"tomorrow\" means the day after the email date\n    # - \"next Monday\" means the Monday after the email date\n    # - \"next Tuesday\" means the Tuesday after the email date (could be same week or next week)\n    # - Always calculate relative dates based on the email date, not the current date\n    # - For ambiguous expressions like \"next week\", always interpret as the full week (Monday-Friday) starting the Monday after the email date\n    # - When a specific day is mentioned (e.g., \"next Wednesday\"), calculate which Wednesday that refers to based on the email date\n    #\n    # ***UNIX TIMESTAMP HANDLING***\n    # - If the email date is provided as a Unix timestamp (e.g., \"1754329721000\"), convert it to a readable date first\n    # - Unix timestamps represent milliseconds since January 1, 1970 UTC\n    # - Convert the timestamp to the corresponding date in Pacific time zone\n    # - Use this converted date as the reference point for all relative date expressions\n    #\n    # Example: If email date is 1754329721000 (Unix timestamp), then:\n    # - This converts to August 4, 2025 in Pacific time\n    # - \"today\" = August 4, 2025\n    # - \"tomorrow\" = August 5, 2025\n    # - \"next week\" = August 11-15, 2025 (Monday-Friday)\n    #\n    # Example: If email date is 2025-07-28 (Monday), then:\n    # - \"next week\" = 2025-08-04 to 2025-08-08 (Monday-Friday)\n    # - \"next Wednesday\" = 2025-07-30 (same week)\n    # - \"next Monday\" = 2025-08-04 (next week)\n    # ***OUTPUT FORMAT***\n    # Answer in JSON using this schema:\n{\n  action_needed: bool,\n  requestor: string,\n  participants: string,\n  executive_assistants: string,\n  silent_observers: string,\n  timerange_start: string,\n  timerange_end: string,\n  request_details: string,\n}\n    \n    # ***VALIDATION RULES***\n    # - Set action_needed to true if and only if there is a request for Sid's calendar *AND* Ashley needs to take action.\n    # - If action_needed is false, set all other fields to empty strings\n    # - Determine the time period over which Sid's calendar must be searched (timerange_start, timerange_end)\n    # - All times in timerange_start, timerange_end MUST be in YYYY-mm-dd hh:mm format and in pacific time zone\n    # - Requestor MUST be the first name of the person making the request\n    # - Participants MUST be email addresses, MUST NOT include Sid (sid.mathur@gmail.com)\n    # - Executive_assistants MUST be email addresses, MUST NOT include Ashley (ashley.sidsai@gmail.com)\n    # - Silent Observers MUST be email addresses, MUST NOT be included in participants or executive_assistants\n    # - All email lists (participants, executive_assistants, silent_observers) MUST be comma-separated WITHOUT spaces (e.g., \"email1@domain.com,email2@domain.com\")\n    #\n    # Here is the full conversation thread:\n    # From: {{ $json.From }}\n      To: {{ $json.To }}\n      Cc: {{ $json.Cc }}\n      Date: {{ $json.internalDate }}\n      Subject: {{ $json.Subject }}\n    # Content: {{ $json.snippet }}\n    \"#",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -180,
+        -60
+      ],
+      "id": "67f70034-bdd4-4544-beef-409c30b218e8",
+      "name": "Summarize Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e812b0a3-e598-4e1d-9eb0-ed15889627a5",
+              "leftValue": "={{ $json.output.action_needed }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        140,
+        -60
+      ],
+      "id": "ea6fbacf-e2e1-4091-8a4e-74cfd8965fda",
+      "name": "If Ashely needs to take action"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "sid.mathur@gmail.com",
+          "mode": "list",
+          "cachedResultName": "sid.mathur@gmail.com"
+        },
+        "returnAll": true,
+        "timeMin": "={{ $json.output.timerange_start }}",
+        "timeMax": "={{ $json.output.timerange_end }}",
+        "options": {
+          "orderBy": "startTime"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        260,
+        120
+      ],
+      "id": "99cc5bc4-f6cd-4499-b26d-b96825699204",
+      "name": "Get Availability",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "LFlgMde9BXmD8Wd0",
+          "name": "Sids Google Calendar"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "schedule",
+        "include": "specifiedFields",
+        "fieldsToInclude": "summary, start, end, creator, output",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        380,
+        120
+      ],
+      "id": "1bd44d62-ae6a-450e-b34d-c73e6ab697dd",
+      "name": "Aggregate",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=# ***YOUR GOAL***\n  You are Ashley, Sid's calendar assistant. You need to understand the meeting request, check Sid's availability, and respond appropriately.\n  \n  # ***ASHLEY'S PERSONALITY***\n  - Professional and efficient\n  - Warm and helpful tone\n  - Always double-checks details before taking action\n  - Provides clear, actionable responses\n  - Respects Sid's time and preferences\n  \n  # ***PROCESS***\n  1. Understand the request from the calendar intent\n  2. Check Sid's calendar availability for the requested time period\n  3. Determine if the requested times work or if alternatives are needed\n  4. Generate a polite, professional email response\n  5. If booking time, provide calendar invite details\n  \n  # ***AVAILABLE ACTIONS***\n  - NoAction: If it is clear that someone else will take (or has taken) an action ***AND*** that action does not cause a conflict on Sid's calendar. In such as case, neither an email response nor a calendar invite should be included.\n  - AskForClarification: When critical information is missing (duration, participants, time preferences). Do NOT book or suggest times when asking for clarification.\n  - BookTime: If the booking request is directed towards Ashley, and Sid is available for the requested time slots and duration. ONLY book when explicitly asked to schedule/book a meeting.\n  - SuggestTimes: If the request is not about booking time but discovering availability. If the request is for specific time slots and Sid is not available for requested slots, suggest alternatives. Note the time and reason for conflicts in the conflict_notes field. **ALSO use SuggestTimes when there is a scheduling conflict in an informational message, to suggest alternative times.**\n  \n\n  # ***IMPORTANT: WHEN NOT TO TAKE ACTION***\n  - If the request is informational (FYI, \"I am sending an invite\", \"I've already scheduled\"), do NOT book time or send calendar invites\n  - If another EA is handling the scheduling, do NOT book time or send calendar invites\n  - If the request explicitly states \"no action needed from you\", do NOT book time or send calendar invites\n  - In these cases, only acknowledge the information and confirm availability if asked\n  \n \n  # ***CALENDAR ANALYSIS RULES***\n  - All times should be in Pacific Time\n  - A time slot is available if and only if Sid does not have existing meetings during the entire time slot\n  - If requested slots are unavailable, suggest the best alternatives\n  \n  # ***EMAIL RESPONSE GUIDELINES***\n  - Start with a warm greeting using the first name of the requestor\n  - Clearly state what you're doing (booking, suggesting alternatives, or asking for clarification)\n  - Be specific about times, dates, and participants\n  - If booking, confirm all details and mention the calendar invite\n  - If suggesting alternatives, provide 2-3 good options with specific times\n  - If asking for clarification, be specific about what information is needed\n  - **DO NOT** share any information about Sid's calendar other than acceptable times. \n  - If the schedule necessitates searching over multiple dates, include tables for easy consumption. \n  - Keep the tone warm and efficient\n  - Sign off with the signature \"Best Regards, Ashley, Sid's Personal AI Assistant (I am still ramping up, so please forgive my errors)\"\n  \n  # ***ACTION SELECTION RULES***\n  - Use BookTime when:\n    * Explicitly asked to \"schedule\", \"book\", \"set up\", or \"please schedule\" a meeting AND Sid is available\n    * The request includes specific meeting parameters (duration, date, participants) and asks to \"find\" or \"get\" a slot\n  - Use SuggestTimes when:\n    * Asked to \"check availability\", \"suggest times\", or when Sid is not available for requested slots\n    * The request asks for availability suggestions rather than direct booking\n  - Use AskForClarification when critical details are missing (duration, time range, participants)\n  - For informational requests (FYI, already scheduled), use AskForClarification and set send_calendar_invite to false\n  \n  # ***CALENDAR INVITE DETAILS (when booking)***\n  - Only provide calendar invite details when actually booking confirmed times\n  - Use a clear, descriptive subject line\n  - Include meeting description/agenda if provided\n  - Ensure start/end times are within requested slots\n  - Verify meeting duration matches the request\n  - Include only the participants, not the executive assistants or silent observers\n\n\n  # ***OUTPUT FORMAT***\n  Answer in JSON using this schema:\n{\n  action: 'BookTime' or 'SuggestTimes' or 'AskForClarification' or 'NoAction',\n  conflict_notes: string,\n  email_response: string,\n  send_calendar_invite: bool,\n  calendar_invite_subject: string,\n  meeting_start_time: string,\n  meeting_end_time: string,\n  meeting_duration_minutes: int,\n  participants_to_invite: string,\n  meeting_description: string,\n}\n  \n  # ***INPUT DATA***\n  Calendar Intent: {{ $json.output.toJsonString() }}\n  Sid's Calendar Data: {{ $json.schedule.toJsonString() }}\n  \"#",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        660,
+        -60
+      ],
+      "id": "f224eb0d-ede4-444e-bd18-5c6cc3970dc0",
+      "name": "Construct email and invite"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "base": {
+          "__rl": true,
+          "value": "apphTEvEZ7AO3EIUj",
+          "mode": "list",
+          "cachedResultName": "AshleyReviewSchema.csv",
+          "cachedResultUrl": "https://airtable.com/apphTEvEZ7AO3EIUj"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblpHzqtpdhP2evGZ",
+          "mode": "list",
+          "cachedResultName": "HITL",
+          "cachedResultUrl": "https://airtable.com/apphTEvEZ7AO3EIUj/tblpHzqtpdhP2evGZ"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "action_taken": false,
+            "request_id": "={{ $('Get full email').item.json.id }}",
+            "created_at": "={{  new Date() }}",
+            "input_text": "={{ $('Get full email').item.json.snippet }}",
+            "ai_action_needed": "={{ $('Summarize Request').item.json.output.action_needed }}",
+            "ai_requestor": "={{ $('Summarize Request').item.json.output.requestor }}",
+            "ai_participants": "={{ $('Summarize Request').item.json.output.participants }}",
+            "ai_executive_assistants": "={{ $('Summarize Request').item.json.output.executive_assistants }}",
+            "ai_silent_observers": "={{ $('Summarize Request').item.json.output.silent_observers }}",
+            "ai_timerange_start": "={{ $('Summarize Request').item.json.output.timerange_start }}",
+            "ai_timerange_end": "={{ $('Summarize Request').item.json.output.timerange_end }}",
+            "ai_request_details": "={{ $('Summarize Request').item.json.output.request_details }}",
+            "ashley_action": "={{ $json.output.action }}",
+            "ashley_conflict_notes": "={{ $json.output.conflict_notes }}",
+            "ashley_email_response": "={{ $json.output.email_response }}",
+            "ashley_send_calendar_invite": "={{ $json.output.send_calendar_invite }}",
+            "ashley_calendar_invite_subject": "={{ $json.output.calendar_invite_subject }}",
+            "ashley_meeting_start_time": "={{ $json.output.meeting_start_time }}",
+            "ashley_meeting_end_time": "={{ $json.output.meeting_end_time }}",
+            "ashley_meeting_duration_minutes": "={{ $json.output.meeting_duration_minutes }}",
+            "ashley_participants_to_invite": "={{ $json.output.participants_to_invite }}",
+            "ashley_meeting_description": "={{ $json.output.meeting_description }}",
+            "approval_status": "pending"
+          },
+          "matchingColumns": [
+            "request_id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "request_id",
+              "displayName": "request_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "input_text",
+              "displayName": "input_text",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ai_action_needed",
+              "displayName": "ai_action_needed",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ai_requestor",
+              "displayName": "ai_requestor",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ai_participants",
+              "displayName": "ai_participants",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ai_executive_assistants",
+              "displayName": "ai_executive_assistants",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ai_silent_observers",
+              "displayName": "ai_silent_observers",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ai_timerange_start",
+              "displayName": "ai_timerange_start",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ai_timerange_end",
+              "displayName": "ai_timerange_end",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ai_request_details",
+              "displayName": "ai_request_details",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reviewed_action_needed",
+              "displayName": "reviewed_action_needed",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reviewed_requestor",
+              "displayName": "reviewed_requestor",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reviewed_participants",
+              "displayName": "reviewed_participants",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reviewed_executive_assistants",
+              "displayName": "reviewed_executive_assistants",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reviewed_silent_observers",
+              "displayName": "reviewed_silent_observers",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reviewed_timerange_start",
+              "displayName": "reviewed_timerange_start",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reviewed_timerange_end",
+              "displayName": "reviewed_timerange_end",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reviewed_request_details",
+              "displayName": "reviewed_request_details",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ashley_action",
+              "displayName": "ashley_action",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ashley_conflict_notes",
+              "displayName": "ashley_conflict_notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ashley_email_response",
+              "displayName": "ashley_email_response",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ashley_send_calendar_invite",
+              "displayName": "ashley_send_calendar_invite",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ashley_calendar_invite_subject",
+              "displayName": "ashley_calendar_invite_subject",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ashley_meeting_start_time",
+              "displayName": "ashley_meeting_start_time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ashley_meeting_end_time",
+              "displayName": "ashley_meeting_end_time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ashley_meeting_duration_minutes",
+              "displayName": "ashley_meeting_duration_minutes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ashley_participants_to_invite",
+              "displayName": "ashley_participants_to_invite",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ashley_meeting_description",
+              "displayName": "ashley_meeting_description",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reviewed_action",
+              "displayName": "reviewed_action",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reviewed_conflict_notes",
+              "displayName": "reviewed_conflict_notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reviewed_email_response",
+              "displayName": "reviewed_email_response",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reviewed_send_calendar_invite",
+              "displayName": "reviewed_send_calendar_invite",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reviewed_calendar_invite_subject",
+              "displayName": "reviewed_calendar_invite_subject",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reviewed_meeting_start_time",
+              "displayName": "reviewed_meeting_start_time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reviewed_meeting_end_time",
+              "displayName": "reviewed_meeting_end_time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reviewed_meeting_duration_minutes",
+              "displayName": "reviewed_meeting_duration_minutes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reviewed_participants_to_invite",
+              "displayName": "reviewed_participants_to_invite",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reviewed_meeting_description",
+              "displayName": "reviewed_meeting_description",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reviewer_observations",
+              "displayName": "reviewer_observations",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "approval_status",
+              "displayName": "approval_status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "pending",
+                  "value": "pending"
+                },
+                {
+                  "name": "approved",
+                  "value": "approved"
+                },
+                {
+                  "name": "rejected",
+                  "value": "rejected"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "action_taken",
+              "displayName": "action_taken",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "test_case",
+              "displayName": "test_case",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "test_case_name",
+              "displayName": "test_case_name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        960,
+        -60
+      ],
+      "id": "46e2595b-24aa-480e-856d-fc16e700c730",
+      "name": "Save for human in the loop",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "HIsZFnlY4aIccGi7",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $json.fields.request_id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1180,
+        -60
+      ],
+      "id": "6f7f2fac-ee33-4820-a2e7-504154777d4a",
+      "name": "Mark a message as read",
+      "webhookId": "6eaa86bf-5ecc-41a5-bd5f-74574c1ea757",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "l6FLmcnty93cD3Zw",
+          "name": "Ashley Gmail"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code": {
+      "main": [
+        []
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Summarize Request",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Summarize Request",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Construct email and invite",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Construct email and invite",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Construct email and invite",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New Email to Ashley": {
+      "main": [
+        [
+          {
+            "node": "Get full email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get full email": {
+      "main": [
+        [
+          {
+            "node": "Reconstruct body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reconstruct body": {
+      "main": [
+        [
+          {
+            "node": "Don't respond to self",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Don't respond to self": {
+      "main": [
+        [
+          {
+            "node": "Summarize Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize Request": {
+      "main": [
+        [
+          {
+            "node": "If Ashely needs to take action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Ashely needs to take action": {
+      "main": [
+        [
+          {
+            "node": "Get Availability",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Availability": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Construct email and invite": {
+      "main": [
+        [
+          {
+            "node": "Save for human in the loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save for human in the loop": {
+      "main": [
+        [
+          {
+            "node": "Mark a message as read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "68a2efb5-ee86-4edc-a569-51f530a8f5b4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "617ae5ca711d221757e21f169809b1f528562a8e72f2a8aca107d2e9922468db"
+  },
+  "id": "KnGcoAtMUtw8uaOe",
+  "tags": []
+}

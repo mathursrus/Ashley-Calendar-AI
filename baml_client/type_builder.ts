@@ -22,33 +22,41 @@ import { FieldType } from '@boundaryml/baml/native'
 import { TypeBuilder as _TypeBuilder, EnumBuilder, EnumViewer, ClassBuilder, ClassViewer } from '@boundaryml/baml/type_builder'
 import { DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIME } from "./globals"
 
+export { FieldType, EnumBuilder, ClassBuilder }
+
 export default class TypeBuilder {
     private tb: _TypeBuilder;
     
-    CalendarIntent: ClassViewer<'CalendarIntent', "action_needed" | "request_type" | "requestor" | "time_slots_requested" | "meeting_duration" | "timerange_start" | "timerange_end" | "participants" | "executive_assistants" | "silent_observers" | "other_context" | "date_of_request">;
+    AshleyResponse: ClassViewer<'AshleyResponse', "action" | "conflict_notes" | "email_response" | "send_calendar_invite" | "calendar_invite_subject" | "meeting_start_time" | "meeting_end_time" | "meeting_duration_minutes" | "participants_to_invite" | "meeting_description">;
+    
+    CalendarIntent: ClassViewer<'CalendarIntent', "action_needed" | "requestor" | "participants" | "executive_assistants" | "silent_observers" | "timerange_start" | "timerange_end" | "request_details">;
     
     
-    RequestType: EnumViewer<'RequestType', "DoesTimeWork" | "SuggestTime" | "BookTime">;
+    AshleyAction: EnumViewer<'AshleyAction', "BookTime" | "SuggestTimes" | "AskForClarification" | "NoAction">;
     
 
     constructor() {
         this.tb = new _TypeBuilder({
           classes: new Set([
-            "CalendarIntent",
+            "AshleyResponse","CalendarIntent",
           ]),
           enums: new Set([
-            "RequestType",
+            "AshleyAction",
           ]),
           runtime: DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIME
         });
         
+        this.AshleyResponse = this.tb.classViewer("AshleyResponse", [
+          "action","conflict_notes","email_response","send_calendar_invite","calendar_invite_subject","meeting_start_time","meeting_end_time","meeting_duration_minutes","participants_to_invite","meeting_description",
+        ]);
+        
         this.CalendarIntent = this.tb.classViewer("CalendarIntent", [
-          "action_needed","request_type","requestor","time_slots_requested","meeting_duration","timerange_start","timerange_end","participants","executive_assistants","silent_observers","other_context","date_of_request",
+          "action_needed","requestor","participants","executive_assistants","silent_observers","timerange_start","timerange_end","request_details",
         ]);
         
         
-        this.RequestType = this.tb.enumViewer("RequestType", [
-          "DoesTimeWork","SuggestTime","BookTime",
+        this.AshleyAction = this.tb.enumViewer("AshleyAction", [
+          "BookTime","SuggestTimes","AskForClarification","NoAction",
         ]);
         
     }

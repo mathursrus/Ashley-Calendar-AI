@@ -22,7 +22,7 @@ import type { BamlRuntime, FunctionResult, BamlCtxManager, Image, Audio, Pdf, Vi
 import { toBamlError, type HTTPRequest } from "@boundaryml/baml"
 import type { Checked, Check, RecursivePartialNull as MovedRecursivePartialNull } from "./types"
 import type * as types from "./types"
-import type {CalendarIntent, RequestType} from "./types"
+import type {AshleyAction, AshleyResponse, CalendarIntent} from "./types"
 import type TypeBuilder from "./type_builder"
 import { HttpRequest, HttpStreamRequest } from "./sync_request"
 import { LlmResponseParser, LlmStreamParser } from "./parser"
@@ -88,6 +88,34 @@ export class BamlSyncClient {
     return this.llmStreamParser
   }
 
+  
+  AshleyCalendarAssistant(
+      calendar_intent: types.CalendarIntent,sid_calendar_data: string,
+      __baml_options__?: BamlCallOptions
+  ): types.AshleyResponse {
+    try {
+      const options = { ...this.bamlOptions, ...(__baml_options__ || {}) }
+      const collector = options.collector ? (Array.isArray(options.collector) ? options.collector : [options.collector]) : [];
+      const rawEnv = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const env: Record<string, string> = Object.fromEntries(
+        Object.entries(rawEnv).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+      const raw = this.runtime.callFunctionSync(
+        "AshleyCalendarAssistant",
+        {
+          "calendar_intent": calendar_intent,"sid_calendar_data": sid_calendar_data
+        },
+        this.ctxManager.cloneContext(),
+        options.tb?.__tb(),
+        options.clientRegistry,
+        collector,
+        env,
+      )
+      return raw.parsed(false) as types.AshleyResponse
+    } catch (error: any) {
+      throw toBamlError(error);
+    }
+  }
   
   ExtractCalendarIntent(
       email_thread: string,

@@ -1,30 +1,11 @@
-enum RequestType {
-  DoesTimeWork
-  SuggestTime
-  BookTime
-}
+
 
 class CalendarIntent {
   /// Whether this message requires a calendar action
   action_needed bool
   
-  /// Type of calendar request
-  request_type RequestType
-  
   /// Name of person who originally requested the meeting
   requestor string
-  
-  /// What time slots are suggested
-  time_slots_requested string
-  
-  /// How long is being requested (e.g., "30 mins", "1 hour", "2 hours")
-  meeting_duration string
-  
-  /// The earliest datetime being considered for the meeting formatted as YYYY-mm-dd hh:mm
-  timerange_start string
-  
-  /// The latest datetime being considered for the meeting formatted as YYYY-mm-dd hh:mm
-  timerange_end string
   
   /// Who needs to be included in the meeting - list of email addresses. Do not include Sid (sid.mathur@gmail.com)
   participants string
@@ -35,20 +16,31 @@ class CalendarIntent {
   /// Who are the silent observers - list of email addresses. 
   silent_observers string
   
-  /// Any additional context for the meeting
-  other_context string
+  /// The earliest datetime being considered for the meeting formatted as YYYY-mm-dd hh:mm
+  timerange_start string
   
-  /// Date of the request
-  date_of_request string
+  /// The latest datetime being considered for the meeting formatted as YYYY-mm-dd hh:mm
+  timerange_end string
+  
+  /// What the requestor is asking for
+  request_details string
 }
 
 function ExtractCalendarIntent(email_thread: string) -> CalendarIntent {
-    client "openai/gpt-4o" // Set OPENAI_API_KEY to use this client.
+    client CustomSonnet
     prompt #"
     # ***YOUR GOAL***
     # You are being provided with an email thread. Your job is to determine whether this email thread requires action on the part of Ashley, Sid's calendar assistant. 
     # Understand the full context of the thread to determine whether Ashley needs to take an action. If so, help Ashley with understanding the context of the action they need to take. 
     # If Ashley does not need to take any action, you don't need to provide additional context.
+    #
+    # ***CONTEXT CAPTURE***
+    # When extracting request_details, capture the FULL context including:
+    # - What times/dates DON'T work and why (constraints)
+    # - What times/dates DO work (availability)
+    # - The current proposal or request
+    # - Any preferences or requirements mentioned
+    # This helps Ashley make informed decisions about suggesting alternatives.
     #
     # ***CONTEXT***
     # The provided email thread contains information about the sender, recipients, subject, content. It also contains date each message was sent - recent responses are at the top of the thread. 
@@ -76,6 +68,18 @@ function ExtractCalendarIntent(email_thread: string) -> CalendarIntent {
     # - For ambiguous expressions like "next week", always interpret as the full week (Monday-Friday) starting the Monday after the email date
     # - When a specific day is mentioned (e.g., "next Wednesday"), calculate which Wednesday that refers to based on the email date
     #
+    # ***UNIX TIMESTAMP HANDLING***
+    # - If the email date is provided as a Unix timestamp (e.g., "1754329721000"), convert it to a readable date first
+    # - Unix timestamps represent milliseconds since January 1, 1970 UTC
+    # - Convert the timestamp to the corresponding date in Pacific time zone
+    # - Use this converted date as the reference point for all relative date expressions
+    #
+    # Example: If email date is 1754329721000 (Unix timestamp), then:
+    # - This converts to August 4, 2025 in Pacific time
+    # - "today" = August 4, 2025
+    # - "tomorrow" = August 5, 2025
+    # - "next week" = August 11-15, 2025 (Monday-Friday)
+    #
     # Example: If email date is 2025-07-28 (Monday), then:
     # - "next week" = 2025-08-04 to 2025-08-08 (Monday-Friday)
     # - "next Wednesday" = 2025-07-30 (same week)
@@ -86,20 +90,12 @@ function ExtractCalendarIntent(email_thread: string) -> CalendarIntent {
     
     # ***VALIDATION RULES***
     # - Set action_needed to true if and only if there is a request for Sid's calendar *AND* Ashley needs to take action.
-    # - If action_needed is false, set request_type to "SuggestTime" and all other fields can be empty strings
-    # - If action_needed is true, closely examine the request to determine the request type. 
-    #   * If and only if no timing constraints are mentioned and Ashley is being asked to suggest times on Sid's calendar, request_type should be SuggestTime.
-    #   * If time slots are mentioned and Ashley is being asked to check if a time works, request_type should be DoesTimeWork.
-    #   * If time slots are mentioned and Ashley is being asked to book a time, request_type should be BookTime.
-    # - If action_needed is true, timerange_start and timerange_end are required. timerange_start is the earliest time the meeting can start, and timerange_end is the latest time the meeting can end. Fill in the other fields based on request_type:
-    #   * DoesTimeWork: time_slots_requested, meeting_duration are required
-    #   * SuggestTime: all fields are required
-    #   * BookTime: all fields are required
-    # - All times in time_slots_requested, timerange_start, timerange_end MUST be in YYYY-mm-dd hh:mm format and in pacific time zone
-    # - All dates in date_of_request MUST be in YYYY-mm-dd format and in pacific time zone
-    # - All meeting durations MUST be in the format of "X minutes"
+    # - If action_needed is false, set all other fields to empty strings
+    # - Determine the time period over which Sid's calendar must be searched (timerange_start, timerange_end)
+    # - All times in timerange_start, timerange_end MUST be in YYYY-mm-dd hh:mm format and in pacific time zone
+    # - Requestor MUST be the first name of the person making the request
     # - Participants MUST be email addresses, MUST NOT include Sid (sid.mathur@gmail.com)
-    # - Executive_assistants MUST be email addresses,MUST NOT include Ashley (ashley.sidsai@gmail.com)
+    # - Executive_assistants MUST be email addresses, MUST NOT include Ashley (ashley.sidsai@gmail.com)
     # - Silent Observers MUST be email addresses, MUST NOT be included in participants or executive_assistants
     # - All email lists (participants, executive_assistants, silent_observers) MUST be comma-separated WITHOUT spaces (e.g., "email1@domain.com,email2@domain.com")
     #

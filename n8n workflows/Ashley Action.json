@@ -1,0 +1,959 @@
+{
+  "name": "Ashley Action",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -880,
+        120
+      ],
+      "id": "13b57486-e1e6-4684-b801-4816154190b9",
+      "name": "Periodically"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apphTEvEZ7AO3EIUj",
+          "mode": "list",
+          "cachedResultName": "Ashley-HITL",
+          "cachedResultUrl": "https://airtable.com/apphTEvEZ7AO3EIUj"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblpHzqtpdhP2evGZ",
+          "mode": "list",
+          "cachedResultName": "HITL",
+          "cachedResultUrl": "https://airtable.com/apphTEvEZ7AO3EIUj/tblpHzqtpdhP2evGZ"
+        },
+        "filterByFormula": "AND({approval_status} = \"approved\", {action_taken} = 0)",
+        "options": {},
+        "sort": {
+          "property": [
+            {
+              "field": "created_at"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -720,
+        120
+      ],
+      "id": "0a7467d9-8690-4261-b29b-88b2e87b99d1",
+      "name": "Look for human approval",
+      "alwaysOutputData": false,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "HIsZFnlY4aIccGi7",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "function prefer(preferred, fallback) {\n  return preferred && preferred.trim() !== '' ? preferred : fallback;\n}\n\nreturn $input.all().map(item => {\n  return {\n    json: {\n      action_needed: prefer(item.json.reviewed_action, item.json.ashley_action),\n      to: prefer(item.json.reviewed_participants_to_invite, item.json.ashley_participants_to_invite),\n      subject: prefer(item.json.reviewed_calendar_invite_subject, item.json.ashley_calendar_invite_subject),\n      body: prefer(item.json.reviewed_email_response, item.json.ashley_email_response),\n      calendar_start: prefer(item.json.reviewed_meeting_start_time, item.json.ashley_meeting_start_time),\n      calendar_end: prefer(item.json.reviewed_meeting_end_time, item.json.ashley_meeting_end_time),\n      calendar_description: prefer(item.json.reviewed_meeting_description, item.json.ashley_meeting_description),\n      send_invite: item.json.reviewed_send_calendar_invite ?? item.json.ashley_send_calendar_invite,\n      record_id: item.json.request_id\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -540,
+        120
+      ],
+      "id": "0ca25659-0988-4840-9be7-0ca152e3b2bc",
+      "name": "Incorporate Human Corrections"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ddeac3ac-9c20-47d8-b43f-3f98b390c478",
+              "leftValue": "={{ $json.action_needed }}",
+              "rightValue": "NoAction",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -360,
+        120
+      ],
+      "id": "714067ee-03f6-4aa2-90a3-79dee40137ee",
+      "name": "If Ashely needs to take an action"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $json.record_id }}",
+        "emailType": "text",
+        "message": "={{ $json.body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -240,
+        -60
+      ],
+      "id": "fe1d1905-7b39-4165-bb78-375700b0a3e1",
+      "name": "Reply to the mail",
+      "webhookId": "88667b66-095b-4cf7-a8cc-7d6ae77828b4",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "l6FLmcnty93cD3Zw",
+          "name": "Ashley Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e44cc6ef-b7f3-409e-afc2-d9dd390dce24",
+              "leftValue": "={{ $('Incorporate Human Corrections').item.json.send_invite }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -60,
+        -60
+      ],
+      "id": "785155ab-96b7-4903-8eb3-e2cc6faeb4e1",
+      "name": "If Calendar invite needs to be sent"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2d482a08-a454-41f7-be02-20a596f28869",
+              "leftValue": "={{ $('Incorporate Human Corrections').item.json.to }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        100,
+        -120
+      ],
+      "id": "c3b0b188-326c-46bd-9b35-52d23f6cc63b",
+      "name": "Are there other participants"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "sid.mathur@gmail.com",
+          "mode": "list",
+          "cachedResultName": "sid.mathur@gmail.com"
+        },
+        "start": "={{ $('Incorporate Human Corrections').item.json.calendar_start }}",
+        "end": "={{ $('Incorporate Human Corrections').item.json.calendar_end }}",
+        "additionalFields": {
+          "attendees": [
+            "={{ $('Incorporate Human Corrections').item.json.to }}"
+          ],
+          "description": "={{ $('Incorporate Human Corrections').item.json.calendar_description }}",
+          "summary": "={{ $('Incorporate Human Corrections').item.json.subject }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        280,
+        -200
+      ],
+      "id": "01fda3a9-427a-4aca-b060-ea36b41c24c9",
+      "name": "Send meeting invite",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "LFlgMde9BXmD8Wd0",
+          "name": "Sids Google Calendar"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "sid.mathur@gmail.com",
+          "mode": "list",
+          "cachedResultName": "sid.mathur@gmail.com"
+        },
+        "start": "={{ $('Incorporate Human Corrections').item.json.calendar_start }}",
+        "end": "={{ $('Incorporate Human Corrections').item.json.calendar_end }}",
+        "additionalFields": {
+          "attendees": [],
+          "description": "={{ $('Incorporate Human Corrections').item.json.calendar_description }}",
+          "summary": "={{ $('Incorporate Human Corrections').item.json.subject}}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        280,
+        -60
+      ],
+      "id": "8c588f03-8e81-4e0d-8812-be2c30b7322e",
+      "name": "Book a time block",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "LFlgMde9BXmD8Wd0",
+          "name": "Sids Google Calendar"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "apphTEvEZ7AO3EIUj",
+          "mode": "list",
+          "cachedResultName": "Ashley-HITL",
+          "cachedResultUrl": "https://airtable.com/apphTEvEZ7AO3EIUj"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblpHzqtpdhP2evGZ",
+          "mode": "list",
+          "cachedResultName": "HITL",
+          "cachedResultUrl": "https://airtable.com/apphTEvEZ7AO3EIUj/tblpHzqtpdhP2evGZ"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "action_taken": true,
+            "request_id": "={{ $('If Ashely needs to take an action').item.json.record_id }}"
+          },
+          "matchingColumns": [
+            "request_id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "request_id",
+              "displayName": "request_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "approval_status",
+              "displayName": "approval_status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "pending",
+                  "value": "pending"
+                },
+                {
+                  "name": "approved",
+                  "value": "approved"
+                },
+                {
+                  "name": "rejected",
+                  "value": "rejected"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "action_taken",
+              "displayName": "action_taken",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "input_text",
+              "displayName": "input_text",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ai_action_needed",
+              "displayName": "ai_action_needed",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ai_requestor",
+              "displayName": "ai_requestor",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ai_participants",
+              "displayName": "ai_participants",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ai_executive_assistants",
+              "displayName": "ai_executive_assistants",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ai_silent_observers",
+              "displayName": "ai_silent_observers",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ai_timerange_start",
+              "displayName": "ai_timerange_start",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ai_timerange_end",
+              "displayName": "ai_timerange_end",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ai_request_details",
+              "displayName": "ai_request_details",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "reviewed_action_needed",
+              "displayName": "reviewed_action_needed",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "reviewed_requestor",
+              "displayName": "reviewed_requestor",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "reviewed_participants",
+              "displayName": "reviewed_participants",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "reviewed_executive_assistants",
+              "displayName": "reviewed_executive_assistants",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "reviewed_silent_observers",
+              "displayName": "reviewed_silent_observers",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "reviewed_timerange_start",
+              "displayName": "reviewed_timerange_start",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "reviewed_timerange_end",
+              "displayName": "reviewed_timerange_end",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "reviewed_request_details",
+              "displayName": "reviewed_request_details",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ashley_action",
+              "displayName": "ashley_action",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ashley_conflict_notes",
+              "displayName": "ashley_conflict_notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ashley_email_response",
+              "displayName": "ashley_email_response",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ashley_send_calendar_invite",
+              "displayName": "ashley_send_calendar_invite",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ashley_calendar_invite_subject",
+              "displayName": "ashley_calendar_invite_subject",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ashley_meeting_start_time",
+              "displayName": "ashley_meeting_start_time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ashley_meeting_end_time",
+              "displayName": "ashley_meeting_end_time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ashley_meeting_duration_minutes",
+              "displayName": "ashley_meeting_duration_minutes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ashley_participants_to_invite",
+              "displayName": "ashley_participants_to_invite",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ashley_meeting_description",
+              "displayName": "ashley_meeting_description",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "reviewed_action",
+              "displayName": "reviewed_action",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "reviewed_conflict_notes",
+              "displayName": "reviewed_conflict_notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "reviewed_email_response",
+              "displayName": "reviewed_email_response",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "reviewed_send_calendar_invite",
+              "displayName": "reviewed_send_calendar_invite",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "reviewed_calendar_invite_subject",
+              "displayName": "reviewed_calendar_invite_subject",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "reviewed_meeting_start_time",
+              "displayName": "reviewed_meeting_start_time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "reviewed_meeting_end_time",
+              "displayName": "reviewed_meeting_end_time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "reviewed_meeting_duration_minutes",
+              "displayName": "reviewed_meeting_duration_minutes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "reviewed_participants_to_invite",
+              "displayName": "reviewed_participants_to_invite",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "reviewed_meeting_description",
+              "displayName": "reviewed_meeting_description",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "reviewer_observations",
+              "displayName": "reviewer_observations",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "test_case",
+              "displayName": "test_case",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "test_case_name",
+              "displayName": "test_case_name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        560,
+        140
+      ],
+      "id": "4ebfab54-bc23-454c-8dde-a9409951e7a8",
+      "name": "Action Taken",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "HIsZFnlY4aIccGi7",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Periodically": {
+      "main": [
+        [
+          {
+            "node": "Look for human approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Look for human approval": {
+      "main": [
+        [
+          {
+            "node": "Incorporate Human Corrections",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Incorporate Human Corrections": {
+      "main": [
+        [
+          {
+            "node": "If Ashely needs to take an action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Ashely needs to take an action": {
+      "main": [
+        [
+          {
+            "node": "Reply to the mail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Action Taken",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply to the mail": {
+      "main": [
+        [
+          {
+            "node": "If Calendar invite needs to be sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Calendar invite needs to be sent": {
+      "main": [
+        [
+          {
+            "node": "Are there other participants",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Action Taken",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Are there other participants": {
+      "main": [
+        [
+          {
+            "node": "Send meeting invite",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Book a time block",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send meeting invite": {
+      "main": [
+        [
+          {
+            "node": "Action Taken",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Book a time block": {
+      "main": [
+        [
+          {
+            "node": "Action Taken",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "577d11d9-7210-4206-affe-b8278118725d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "617ae5ca711d221757e21f169809b1f528562a8e72f2a8aca107d2e9922468db"
+  },
+  "id": "6z94QGpR1fN72DVz",
+  "tags": []
+}
