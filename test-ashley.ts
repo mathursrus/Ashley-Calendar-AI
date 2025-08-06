@@ -1,16 +1,7 @@
-import * as dotenv from 'dotenv';
+import { sidCalendarData, validateAshleyResponse } from './test-utils';
+import { CalendarIntent, AshleyAction, AshleyResponse } from './baml_client/types';
 import { b } from './baml_client';
-import { CalendarIntent, AshleyResponse, AshleyAction } from './baml_client/types';
-import { setLogLevel } from './baml_client/config';
 
-// Set BAML log level to error to reduce noise
-setLogLevel('error');
-
-// Load environment variables from .env file
-dotenv.config();
-
-
-// Test case interface
 interface AshleyTestCase {
   name: string;
   calendarIntent: CalendarIntent;
@@ -18,74 +9,8 @@ interface AshleyTestCase {
   expectedResponse?: Partial<AshleyResponse>;
 }
 
-// Reusable calendar data
-const sidCalendarData = {
-  // Available calendar - Sid has lots of free time
-  available: `
-Monday, August 4, 2025:
-- 9:00 AM - 10:00 AM: Team Standup
-- 2:00 PM - 3:30 PM: Product Review
-
-Wednesday, August 6, 2025:
-- 10:00 AM - 11:00 AM: Client Meeting
-- 4:30 PM - 5:30 PM: Strategy Session
-
-Thursday, August 7, 2025:
-- 2:30 PM - 3:30 PM: Focus time
-  `,
-  
-  // Busy calendar - Sid has limited availability
-  busy: `
-Monday, August 4, 2025:
-- 9:00 AM - 11:00 AM: Back-to-back meetings
-- 1:00 PM - 2:00 PM: Lunch with investors
-- 3:00 PM - 4:30 PM: Product roadmap review
-- 5:00 PM - 6:00 PM: Team retrospective
-
-Tuesday, August 5, 2025:
-- 8:00 AM - 9:00 AM: Morning standup
-- 10:00 AM - 12:00 PM: Engineering sync
-- 2:00 PM - 3:00 PM: Customer call
-- 4:00 PM - 5:00 PM: Board prep meeting
-
-Wednesday, August 6, 2025:
-- 10:00 AM - 11:00 AM: Client Meeting
-- 1:00 PM - 2:00 PM: Design review
-- 3:00 PM - 4:00 PM: Marketing sync
-- 5:00 PM - 6:00 PM: Weekly planning
-
-
-Thursday, August 7, 2025:
-- 10:00 AM - 11:00 AM: Client Meeting
-- 1:00 PM - 2:00 PM: Design review
-- 3:00 PM - 4:00 PM: Marketing sync
-- 5:00 PM - 6:00 PM: Weekly planning
-
-
-Friday, August 8, 2025:
-- 10:00 AM - 11:00 AM: Client Meeting
-- 1:00 PM - 2:00 PM: Design review
-- 3:00 PM - 4:00 PM: Marketing sync
-- 5:00 PM - 6:00 PM: Weekly planning
-  `,
-  
-
-};
-
-// Validation function
-function validateResult(result: any, expected: any): boolean {
-  // Check if all expected fields match the result
-  for (const [key, expectedValue] of Object.entries(expected)) {
-    if (result[key] !== expectedValue) {
-      console.log(`   ❌ Validation failed: Expected ${key} to be ${expectedValue}, but got ${result[key]}`);
-      return false;
-    }
-  }
-  return true;
-}
-
-// Reusable test runner function
-async function runSingleAshleyTest(testCase: AshleyTestCase): Promise<boolean> {
+// Test runner for Ashley responses
+export async function runAshleyTest(testCase: AshleyTestCase): Promise<boolean> {
   console.log(`📝 Test: ${testCase.name}`);
   
   // Print input to Ashley
@@ -101,7 +26,7 @@ async function runSingleAshleyTest(testCase: AshleyTestCase): Promise<boolean> {
     console.log('   📊 Result:', JSON.stringify(response, null, 2));
     
     if (testCase.expectedResponse) {
-      const isValid = validateResult(response, testCase.expectedResponse);
+      const isValid = validateAshleyResponse(response, testCase.expectedResponse);
       console.log(`   ${isValid ? '✅' : '❌'} Validation: ${isValid ? 'PASSED' : 'FAILED'}`);
       return isValid;
     } else {
@@ -121,7 +46,7 @@ async function runAllAshleyTests(): Promise<void> {
   const results: { name: string; passed: boolean }[] = [];
   
   for (const testCase of ashleyTestCases) {
-    const passed = await runSingleAshleyTest(testCase);
+    const passed = await runAshleyTest(testCase);
     results.push({ name: testCase.name, passed });
     console.log('');
   }
