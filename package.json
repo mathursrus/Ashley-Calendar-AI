@@ -7,6 +7,7 @@
     "build": "tsc",
     "test-intent": "ts-node test-intent.ts",
     "test-ashley": "ts-node test-ashley.ts",
+    "test-context": "ts-node test-context.ts",
     "dev": "baml dev",
     "generate": "npx baml-cli generate",
     "lint": "eslint src/**/*.ts",
