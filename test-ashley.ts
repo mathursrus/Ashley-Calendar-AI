@@ -73,7 +73,8 @@ const testBookTimeAvailable: AshleyTestCase = {
     silent_observers: "",
     timerange_start: "2025-08-05 15:00",
     timerange_end: "2025-08-07 15:00",
-    request_details: "Please schedule a 45-minute meeting with Sid on either Tuesday, Wednesday or Thursday next week at 2pm to discuss the quarterly budget review."
+    request_details: "Please schedule a 45-minute meeting with Sid on either Tuesday, Wednesday or Thursday next week at 2pm to discuss the quarterly budget review.",
+    baseline_date: "2025-07-05"
   },
   sidCalendarData: sidCalendarData.available,
   expectedResponse: {
@@ -94,7 +95,8 @@ const testBookTimeWithConflict: AshleyTestCase = {
     silent_observers: "",
     timerange_start: "2025-08-06 15:00",
     timerange_end: "2025-08-06 16:00",
-    request_details: "I'd like to schedule a 1-hour meeting with Sid on Wednesday at 3pm to discuss our partnership."
+    request_details: "I'd like to schedule a 1-hour meeting with Sid on Wednesday at 3pm to discuss our partnership.",
+    baseline_date: "2025-08-06"
   },
   sidCalendarData: `
 Wednesday, August 6, 2025:
@@ -118,7 +120,8 @@ const testSuggestTimesBusy: AshleyTestCase = {
     silent_observers: "",
     timerange_start: "2025-08-04 10:00",
     timerange_end: "2025-08-08 16:00",
-    request_details: "I'd like to schedule a 1-hour meeting to discuss the new project timeline. I'm available any time next week between 10 AM and 4 PM."
+    request_details: "I'd like to schedule a 1-hour meeting to discuss the new project timeline. I'm available any time next week between 10 AM and 4 PM.",
+    baseline_date: "2025-08-01"
   },
   sidCalendarData: sidCalendarData.busy,
   expectedResponse: {
@@ -137,7 +140,8 @@ const testAskForClarification: AshleyTestCase = {
     silent_observers: "",
     timerange_start: "2025-07-29 00:00",
     timerange_end: "2025-08-05 23:59",
-    request_details: "I'd like to catch up."
+    request_details: "I'd like to catch up.",
+    baseline_date: "2025-07-29"
   },
   sidCalendarData: sidCalendarData.available,
   expectedResponse: {
@@ -156,7 +160,8 @@ const testAvailabilityCheck: AshleyTestCase = {
     silent_observers: "",
     timerange_start: "2025-07-30 14:00",
     timerange_end: "2025-07-30 14:45",
-    request_details: "If Sid is available on July 30th at 2pm for a 45-minute call, please schedule it."
+    request_details: "If Sid is available on July 30th at 2pm for a 45-minute call, please schedule it.",
+    baseline_date: "2025-07-20"
   },
   sidCalendarData: sidCalendarData.available,
   expectedResponse: {
@@ -178,7 +183,8 @@ const testMeetingWithSpecificConstraints: AshleyTestCase = {
     silent_observers: "",
     timerange_start: "2025-08-05 10:00",
     timerange_end: "2025-08-06 14:00",
-    request_details: "Looking for a 2-hour time slot. Meeting can only be scheduled on Tuesday Aug 5 or Wednesday Aug 6, between 10am-2pm PT."
+    request_details: "Looking for a 2-hour time slot. Meeting can only be scheduled on Tuesday Aug 5 or Wednesday Aug 6, between 10am-2pm PT.",
+    baseline_date: "2025-08-01"
   },
   sidCalendarData: `
 Tuesday, August 5, 2025:
@@ -207,7 +213,8 @@ const testTeamMeetingWithMultipleEAs: AshleyTestCase = {
     silent_observers: "",
     timerange_start: "2025-07-29 00:00",
     timerange_end: "2025-07-29 23:59",
-    request_details: "Marketing team meeting request for 30 mins next Tuesday (July 29). Need to coordinate with Sarah (Mike's EA) and Lisa (John's EA) for scheduling."
+    request_details: "Marketing team meeting request for 30 mins next Tuesday (July 29). Need to coordinate with Sarah (Mike's EA) and Lisa (John's EA) for scheduling.",
+    baseline_date: "2025-07-02"
   },
   sidCalendarData: `
 Tuesday, July 29, 2025:
@@ -231,7 +238,8 @@ const testExternalClientMeeting: AshleyTestCase = {
     silent_observers: "",
     timerange_start: "2025-07-31 12:00",
     timerange_end: "2025-07-31 17:00",
-    request_details: "Request to send invite with following parameters:\n- Duration: 1.5 hours\n- Date: Next Thursday (July 31, 2025)\n- Time preference: Afternoon\n- Participants: Mike Chen and Acme Corp client\n\nAshley needs to find an afternoon slot on Thursday, July 31st for a 1.5-hour meeting."
+    request_details: "Request to send invite with following parameters:\n- Duration: 1.5 hours\n- Date: Next Thursday (July 31, 2025)\n- Time preference: Afternoon\n- Participants: Mike Chen and Acme Corp client\n\nAshley needs to find an afternoon slot on Thursday, July 31st for a 1.5-hour meeting.",
+    baseline_date: "2025-07-16"
   },
   sidCalendarData: `
 Thursday, July 31, 2025:
@@ -260,7 +268,8 @@ const testEABookingRequestAvailable: AshleyTestCase = {
     silent_observers: "",
     timerange_start: "2025-08-06 14:00",
     timerange_end: "2025-08-06 15:00",
-    request_details: "I am sending an invite for a 1-hour meeting with Sid on Wednesday, August 6th at 2pm PT. "
+    request_details: "I am sending an invite for a 1-hour meeting with Sid on Wednesday, August 6th at 2pm PT. ",
+    baseline_date: "2025-08-02"
   },
   sidCalendarData: `
 Wednesday, August 6, 2025:
@@ -284,7 +293,8 @@ const testEABookingRequestUnavailable: AshleyTestCase = {
     silent_observers: "",
     timerange_start: "2025-08-06 14:00",
     timerange_end: "2025-08-06 15:00",
-    request_details: "I am sending an invite for a 1-hour meeting with Sid on Wednesday, August 6th at 2pm PT."
+    request_details: "I am sending an invite for a 1-hour meeting with Sid on Wednesday, August 6th at 2pm PT.",
+    baseline_date: "2025-08-02"
   },
   sidCalendarData: `
 Wednesday, August 6, 2025:

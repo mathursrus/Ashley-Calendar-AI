@@ -24,6 +24,9 @@ class CalendarIntent {
   
   /// What the requestor is asking for
   request_details string
+
+  /// The date of the  email in the thread relative to which dates are calculated. formatted as YYYY-mm-dd
+  baseline_date string
 }
 
 function ExtractCalendarIntent(email_thread: string) -> CalendarIntent {
@@ -33,14 +36,6 @@ function ExtractCalendarIntent(email_thread: string) -> CalendarIntent {
     # You are being provided with an email thread. Your job is to determine whether this email thread requires action on the part of Ashley, Sid's calendar assistant. 
     # Understand the full context of the thread to determine whether Ashley needs to take an action. If so, help Ashley with understanding the context of the action they need to take. 
     # If Ashley does not need to take any action, you don't need to provide additional context.
-    #
-    # ***CONTEXT CAPTURE***
-    # When extracting request_details, capture the FULL context including:
-    # - What times/dates DON'T work and why (constraints)
-    # - What times/dates DO work (availability)
-    # - The current proposal or request
-    # - Any preferences or requirements mentioned
-    # This helps Ashley make informed decisions about suggesting alternatives.
     #
     # ***CONTEXT***
     # The provided email thread contains information about the sender, recipients, subject, content. It also contains date each message was sent - recent responses are at the top of the thread. 
@@ -58,32 +53,22 @@ function ExtractCalendarIntent(email_thread: string) -> CalendarIntent {
     # The working week starts Monday and ends Friday. 
     # 
     # ***CRITICAL DATE INTERPRETATION RULES***
-    # - Use the email date as the absolute reference point for all relative date expressions
-    # - "next week" means the week starting the Monday after the email date
-    # - "this week" means the week containing the email date
-    # - "tomorrow" means the day after the email date
-    # - "next Monday" means the Monday after the email date
-    # - "next Tuesday" means the Tuesday after the email date (could be same week or next week)
-    # - Always calculate relative dates based on the email date, not the current date
-    # - For ambiguous expressions like "next week", always interpret as the full week (Monday-Friday) starting the Monday after the email date
-    # - When a specific day is mentioned (e.g., "next Wednesday"), calculate which Wednesday that refers to based on the email date
+    # - You may encounter email threads with multiple emails. Each email has a date associated with it.
+    # - When an email uses relative date expressions, use the date of that email as your baseline for that expression. 
+    # - "next week" means the week starting the Monday after that specific email date
+    # - "this week" means the week containing that specific email date
+    # - "tomorrow" means the day after that specific email date
+    # - Always calculate relative dates based on the appropriate email where the relative date expression is used, not the current date or the date of the latest email
+    # - When a specific day is mentioned (e.g., "next Wednesday"), calculate which day that refers to based on the specific email date
+    # - baseline_date, timerange_start, timerange_end should be calculated based on this logic
     #
     # ***UNIX TIMESTAMP HANDLING***
     # - If the email date is provided as a Unix timestamp (e.g., "1754329721000"), convert it to a readable date first
     # - Unix timestamps represent milliseconds since January 1, 1970 UTC
     # - Convert the timestamp to the corresponding date in Pacific time zone
-    # - Use this converted date as the reference point for all relative date expressions
     #
     # Example: If email date is 1754329721000 (Unix timestamp), then:
     # - This converts to August 4, 2025 in Pacific time
-    # - "today" = August 4, 2025
-    # - "tomorrow" = August 5, 2025
-    # - "next week" = August 11-15, 2025 (Monday-Friday)
-    #
-    # Example: If email date is 2025-07-28 (Monday), then:
-    # - "next week" = 2025-08-04 to 2025-08-08 (Monday-Friday)
-    # - "next Wednesday" = 2025-07-30 (same week)
-    # - "next Monday" = 2025-08-04 (next week)
     #
     # ***OUTPUT FORMAT***
     # {{ ctx.output_format }}
@@ -93,11 +78,23 @@ function ExtractCalendarIntent(email_thread: string) -> CalendarIntent {
     # - If action_needed is false, set all other fields to empty strings
     # - Determine the time period over which Sid's calendar must be searched (timerange_start, timerange_end)
     # - All times in timerange_start, timerange_end MUST be in YYYY-mm-dd hh:mm format and in pacific time zone
+    # - timerange_start MUST have time 00:00
+    # - timerange_end MUST have time 23:59
+    # - baseline_date MUST be the date of the email in the thread that contains the relative date
     # - Requestor MUST be the first name of the person making the request
     # - Participants MUST be email addresses, MUST NOT include Sid (sid.mathur@gmail.com)
     # - Executive_assistants MUST be email addresses, MUST NOT include Ashley (ashley.sidsai@gmail.com)
     # - Silent Observers MUST be email addresses, MUST NOT be included in participants or executive_assistants
     # - All email lists (participants, executive_assistants, silent_observers) MUST be comma-separated WITHOUT spaces (e.g., "email1@domain.com,email2@domain.com")
+    #
+    # ***CONTEXT CAPTURE***
+    # When reviewing the email thread, capture the FULL context including:
+    # - What times/dates DON'T work and why (constraints)
+    # - What times/dates DO work (availability)
+    # - Dates of each of the emails on the thread and what was said on those dates
+    # - The latest proposal or request
+    # - Any preferences or requirements mentioned
+    # Populate this information in the request_details field. This helps Ashley make informed decisions about suggesting alternatives.
     #
     # Here is the full conversation thread:
     # 
