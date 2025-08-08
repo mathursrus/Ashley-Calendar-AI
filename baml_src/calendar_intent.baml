@@ -50,7 +50,7 @@ function ExtractCalendarIntent(email_thread: string) -> CalendarIntent {
     #
     # ***BE DELIBERATE AND THOUGHTFUL WHILE INTERPRETING TIMES***
     # Treat all dates in pacific time zone, unless otherwise specified. If another time zone is specified, convert all mentions of dates to pacific time zone before procceding. Your responses should only contain pacific time zone.
-    # The working week starts Monday and ends Friday. 
+    # The working week starts Monday and ends Friday. No weekend meetings unless explicitly requested.
     # 
     # ***CRITICAL DATE INTERPRETATION RULES***
     # - You may encounter email threads with multiple emails. Each email has a date associated with it.
