@@ -8,6 +8,8 @@
     "test-intent": "ts-node test-intent.ts",
     "test-ashley": "ts-node test-ashley.ts",
     "test-context": "ts-node test-context.ts",
+    "test-owner-intent": "ts-node test-owner-intent.ts",
+    "test-speech-formatter": "ts-node test-speech-formatter.ts",
     "dev": "baml dev",
     "generate": "npx baml-cli generate",
     "lint": "eslint src/**/*.ts",
@@ -24,7 +26,7 @@
   "author": "Ashley Calendar AI",
   "license": "MIT",
   "devDependencies": {
-    "@boundaryml/baml": "^0.203.1",
+    "@boundaryml/baml": "^0.204.0",
     "@types/jest": "^29.5.8",
     "@types/node": "^20.8.10",
     "@typescript-eslint/eslint-plugin": "^6.9.1",

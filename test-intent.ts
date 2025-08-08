@@ -46,10 +46,10 @@ async function runAllTests(): Promise<void> {
 }
 
 // Single test runner for testInternalDate
-async function runSingleTestOnly(): Promise<void> {
-  console.log('🧪 Testing Calendar Intent Extraction - Internal Date Test...\n');
+async function runSingleTestOnly(testCase: IntentTestCase): Promise<void> {
+  console.log(`🧪 Testing Calendar Intent Extraction - ${testCase.name}...\n`);
   
-  await runIntentTest(testInternalDate);
+  await runIntentTest(testCase);
   
   console.log('🏁 Test completed!');
 }
@@ -382,10 +382,45 @@ const testInternalDate: IntentTestCase = {
     action_needed: true,
     requestor: 'Sid',
     participants: '',
-    timerange_start: '2025-08-04 17:00',
-    timerange_end: '2025-08-04 18:00'
+    timerange_start: '2025-08-04 00:00',
+    timerange_end: '2025-08-04 23:59',
+    baseline_date: '2025-08-04'
   }
 };
+
+// Test case for date interpretation fix - "next week" should be calculated from the email date that contains it
+const testDateInterpretationFix: IntentTestCase = {
+  name: 'dateInterpretationFix',
+  message: {
+    from: identities.colleague,
+    to: identities.ashley,
+    date: dates.internalDate, // August 4, 2025 (current email)
+    subject: 'Re: Meeting with Sarah next week',
+    content: 'Actually, please make that meeting 30 minutes and book it whenever Sid has time',
+    conversationHistory: [
+      {
+        date: 'Tue, July 29, 2025 at 10:01 AM',
+        from: identities.ashley,
+        content: 'I\'d be happy to help schedule a 1-hour meeting with Sarah Johnson. I have several time slots available next week...',
+      },
+      {
+        date: 'Tue, July 28, 2025 at 10:00 AM', // This email contains "next week"
+        from: identities.colleague,
+        content: 'Hi Ashley, can you schedule a 1-hour meeting with Sarah Johnson (sarah.j@company.com) sometime next week? I\'m flexible on timing. Thanks, Mike (Assistant to Sarah)'
+      },
+    ],
+  },
+  expectedIntent: {
+    action_needed: true,
+    requestor: 'Mike',
+    participants: 'sarah.j@company.com',
+    // "next week" from July 28, 2025 should be August 4-8, 2025 (not August 11-15)
+    timerange_start: '2025-08-04 00:00',
+    timerange_end: '2025-08-08 23:59',
+    baseline_date: '2025-07-28'
+  }
+};
+
 
 // Test cases - composed from modular components
 const testCases: IntentTestCase[] = [
@@ -401,8 +436,10 @@ const testCases: IntentTestCase[] = [
   testMultiTurnConversation,
   testComplexMultiTurnConversation,
   testLongEmailThread,
-  testInternalDate
+  testInternalDate,
+  testDateInterpretationFix
 ];
 
 // Run the tests
 runAllTests(); 
+// runSingleTestOnly(testDateInterpretationFix);

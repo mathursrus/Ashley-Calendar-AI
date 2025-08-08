@@ -126,7 +126,28 @@ Friday, August 8, 2025:
 - 9:00 AM - 10:30 AM: Weekly review
 - 11:00 AM - 12:00 PM: Client presentation
 - 2:00 PM - 3:00 PM: Team retrospective
-  `
+  `,
+
+  // Only 30 minutes available
+  only30MinutesAvailable: `
+Monday, August 4, 2025:
+- 9:00 AM - 6:00 PM: Back-to-back meetings
+
+Tuesday, August 5, 2025:
+- 9:00 AM - 6:00 PM: Back-to-back meetings
+
+Wednesday, August 6, 2025:
+- 9:00 AM - 6:00 PM: Back-to-back meetings
+
+Thursday, August 7, 2025:
+- 9:00 AM - 6:00 PM: Back-to-back meetings
+
+Friday, August 8, 2025:
+- 9:00 AM - 11:00 AM: Back-to-back meetings
+- 11:30 AM - 6:00 PM: Back-to-back meetings
+  `,
+  only30MinutesAvailableStart: `2025-08-08 11:00`,
+  only30MinutesAvailableEnd: `2025-08-08 11:30`
 };
 
 // Helper function to convert email message to newline-separated string
@@ -150,7 +171,7 @@ export function createEmailThread(conversationHistory: EmailMessage[]): string {
     
     // Add conversation history as previous emails in thread
     conversationHistory.forEach((msg, index) => {
-     emailThread += `\n On ${msg.date} from ${msg.from} wrote: n`;
+     emailThread += `\nOn ${msg.date} from ${msg.from} wrote:\n`;
      emailThread += msg.content + '\n';
     });
     

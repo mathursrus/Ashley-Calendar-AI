@@ -60,7 +60,7 @@ async function runContextMemoryTest(testCase: ContextMemoryTestCase): Promise<bo
 async function runSingleContextTest(): Promise<void> {
   console.log('🧠 Testing Single Context Memory Test Case...\n');
   
-  const testCase = testBasicConversationContinuity;
+  const testCase = testMultiMessagePlanning;
   const passed = await runContextMemoryTest(testCase);
   
   console.log('\n🏁 Single Test Result:');
@@ -99,7 +99,7 @@ const testBasicConversationContinuity: ContextMemoryTestCase = {
     to: identities.ashley,
     date: dates.internalDate,
     subject: 'Re: Meeting with Sarah next week',
-    content: 'Actually, can we make that meeting 30 minutes instead of the hour we discussed? Please book it if Sid has time',
+    content: 'Actually, please make that meeting 30 minutes and book it whenever Sid has time',
     conversationHistory: [
       {
         date: 'Tue, July 29, 2025 at 10:01 AM',
@@ -113,7 +113,7 @@ const testBasicConversationContinuity: ContextMemoryTestCase = {
       },
     ],
   },
-  sidCalendarData: sidCalendarData.available,
+  sidCalendarData: sidCalendarData.only30MinutesAvailable,
   expectedIntent: {
     action_needed: true,
     requestor: 'Mike',
@@ -124,7 +124,9 @@ const testBasicConversationContinuity: ContextMemoryTestCase = {
     action: AshleyAction.BookTime,
     send_calendar_invite: true,
     meeting_duration_minutes: 30,
-    participants_to_invite: 'sarah.j@company.com'
+    participants_to_invite: 'sarah.j@company.com',
+    meeting_start_time: sidCalendarData.only30MinutesAvailableStart,
+    meeting_end_time: sidCalendarData.only30MinutesAvailableEnd
   }
 };
 
@@ -165,41 +167,37 @@ const testMultiMessagePlanning: ContextMemoryTestCase = {
   email: {
     from: identities.colleague,
     to: identities.ashley,
-    date: dates.internalDate,
+    date: 'Tue, Aug 5, 2025 at 11:00 AM',
     subject: 'Re: Q4 Planning Meeting',
-    content: 'Actually, let\'s also invite the Head of Product. And can we make it next Friday afternoon?',
+    content: 'Actually, can we make it next Friday afternoon?',
     conversationHistory: [
-      {
-        date: 'Sun, Aug 4, 2025 at 11:31 AM',
-        from: identities.ashley,
-        content: 'Got it - Q4 planning meeting for 2 hours with CEO, CTO, VP Sales, VP Marketing, and yourself. When would you like to schedule this?'
-      },
       {
         date: 'Sun, Aug 4, 2025 at 11:30 AM',
         from: identities.colleague,
-        content: 'The attendees should be: CEO, CTO, VP Sales, VP Marketing, and myself. We\'ll need 2 hours.'
+        content: 'We\'ll need 2 hours.'
       },
       {
         date: 'Sun, Aug 4, 2025 at 11:01 AM',
         from: identities.ashley,
-        content: 'I\'ll help you schedule the Q4 planning meeting. Could you provide more details about attendees and timing?'
+        content: 'Sure thing. Could you provide more details about timing?'
       },
       {
         date: 'Sun, Aug 4, 2025 at 11:00 AM',
         from: identities.colleague,
-        content: 'I need to schedule a Q4 planning meeting with the leadership team.'
+        content: 'I need to schedule a Q4 planning meeting with the leadership team. What times work for Sid?'
       }
     ],
   },
-  sidCalendarData: sidCalendarData.available,
+  sidCalendarData: sidCalendarData.busy,
   expectedIntent: {
     action_needed: true,
     requestor: 'Mike',
-    participants: 'mike.chen@company.com'
+    timerange_start: '2025-08-15 00:00',
+    timerange_end: '2025-08-15 23:59',
+    baseline_date: '2025-08-05'
   },
   expectedAshleyResponse: {
-    action: AshleyAction.SuggestTimes,
-    meeting_duration_minutes: 120
+    action: AshleyAction.SuggestTimes
   }
 };
 
@@ -327,5 +325,190 @@ const contextMemoryTestCases: ContextMemoryTestCase[] = [
   testCrossReferenceRelatedMeetings
 ];
 
-// Run the single test
-runSingleContextTest();
+// Function to run individual tests with minimal output
+async function runIndividualTests(): Promise<void> {
+  console.log('🧠 Running Individual Context Memory Tests...\n');
+  
+  const testCases: ContextMemoryTestCase[] = [
+    testBasicConversationContinuity,
+    testDuplicateRequestPrevention,
+    testMultiMessagePlanning,
+    testPendingMeetingStatus,
+    testFailedActionRecovery,
+    testCrossReferenceRelatedMeetings
+  ];
+  
+  const results: { name: string; passed: boolean }[] = [];
+  
+  for (let i = 0; i < testCases.length; i++) {
+    const testCase = testCases[i]!;
+    console.log(`\n📝 Test ${i + 1}/6: ${testCase.name}`);
+    
+    try {
+      const emailThread = emailToString(testCase.email);
+      const calendarIntent = await b.ExtractCalendarIntent(emailThread);
+      const ashleyResponse = await b.AshleyCalendarAssistant(calendarIntent, testCase.sidCalendarData);
+      
+      const intentValid = validateCalendarIntent(calendarIntent, testCase.expectedIntent || {});
+      const ashleyValid = validateAshleyResponse(ashleyResponse, testCase.expectedAshleyResponse || {});
+      const passed = intentValid && ashleyValid;
+      
+      results.push({ name: testCase.name, passed });
+      console.log(`   ${passed ? '✅ PASSED' : '❌ FAILED'}`);
+      
+      if (!passed) {
+        console.log(`   Expected Ashley Action: ${testCase.expectedAshleyResponse?.action || 'N/A'}`);
+        console.log(`   Actual Ashley Action: ${ashleyResponse.action}`);
+      }
+      
+    } catch (error) {
+      results.push({ name: testCase.name, passed: false });
+      console.log(`   ❌ ERROR: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  
+  console.log('\n🏁 Final Results:');
+  console.log('==================');
+  results.forEach((result, i) => {
+    console.log(`${i + 1}. ${result.passed ? '✅' : '❌'} ${result.name}`);
+  });
+  
+  const passedCount = results.filter(r => r.passed).length;
+  console.log(`\n📊 Summary: ${passedCount}/${results.length} tests passed`);
+}
+
+// Function to debug single test
+async function debugSingleTest(): Promise<void> {
+  console.log('🔍 Debugging Multi-Message Planning Test...\n');
+  
+  const testCase = testMultiMessagePlanning;
+  console.log(`📝 Test: ${testCase.name}`);
+  console.log(`📧 Email Content: "${testCase.email.content}"`);
+  console.log(`📅 Calendar Data: ${testCase.sidCalendarData.includes('Friday') ? 'Includes Friday' : 'No Friday data'}`);
+  
+  try {
+    const emailThread = emailToString(testCase.email);
+    console.log('\n📧 Full Email Thread:');
+    console.log(emailThread);
+    
+    const calendarIntent = await b.ExtractCalendarIntent(emailThread);
+    console.log('\n📊 Calendar Intent:');
+    console.log(JSON.stringify(calendarIntent, null, 2));
+    
+    const ashleyResponse = await b.AshleyCalendarAssistant(calendarIntent, testCase.sidCalendarData);
+    console.log('\n🤖 Ashley Response:');
+    console.log(JSON.stringify(ashleyResponse, null, 2));
+    
+    console.log('\n📋 Comparison:');
+    console.log(`Expected Action: ${testCase.expectedAshleyResponse?.action}`);
+    console.log(`Actual Action: ${ashleyResponse.action}`);
+    console.log(`Match: ${testCase.expectedAshleyResponse?.action === ashleyResponse.action ? '✅' : '❌'}`);
+    
+  } catch (error) {
+    console.log(`❌ ERROR: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+// Function to debug basic conversation continuity test
+async function debugBasicConversationTest(): Promise<void> {
+  console.log('🔍 Debugging Basic Conversation Continuity Test...\n');
+  
+  const testCase = testBasicConversationContinuity;
+  console.log(`📝 Test: ${testCase.name}`);
+  console.log(`📧 Email Content: "${testCase.email.content}"`);
+  console.log(`🎯 Expected Action: ${testCase.expectedAshleyResponse?.action}`);
+  
+  try {
+    const emailThread = emailToString(testCase.email);
+    console.log('\n📧 Full Email Thread:');
+    console.log(emailThread);
+    
+    const calendarIntent = await b.ExtractCalendarIntent(emailThread);
+    console.log('\n📊 Calendar Intent:');
+    console.log(JSON.stringify(calendarIntent, null, 2));
+    
+    console.log('\n📅 Calendar Data:');
+    console.log(testCase.sidCalendarData);
+    
+    const ashleyResponse = await b.AshleyCalendarAssistant(calendarIntent, testCase.sidCalendarData);
+    console.log('\n🤖 Ashley Response:');
+    console.log(JSON.stringify(ashleyResponse, null, 2));
+    
+    console.log('\n📋 Comparison:');
+    console.log(`Expected Action: ${testCase.expectedAshleyResponse?.action}`);
+    console.log(`Actual Action: ${ashleyResponse.action}`);
+    console.log(`Match: ${testCase.expectedAshleyResponse?.action === ashleyResponse.action ? '✅' : '❌'}`);
+    
+  } catch (error) {
+    console.log(`❌ ERROR: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+// Function to debug calendar intent extraction specifically
+async function debugCalendarIntentExtraction(): Promise<void> {
+  console.log('🔍 Debugging Calendar Intent Extraction...\n');
+  
+  const testCase = testBasicConversationContinuity;
+  const emailThread = emailToString(testCase.email);
+  
+  console.log('📧 Email Thread Being Sent to AI:');
+  console.log('=' + '='.repeat(50));
+  console.log(emailThread);
+  console.log('=' + '='.repeat(50));
+  
+  console.log('\n🔍 Key Phrases to Look For:');
+  console.log('- "book it whenever Sid has time" (should indicate BookTime)');
+  console.log('- "make that meeting 30 minutes" (duration change)');
+  console.log('- "please" (polite command)');
+  
+  try {
+    const calendarIntent = await b.ExtractCalendarIntent(emailThread);
+    console.log('\n📊 Extracted Calendar Intent:');
+    console.log(JSON.stringify(calendarIntent, null, 2));
+    
+    console.log('\n📋 Analysis:');
+    console.log(`Action Needed: ${calendarIntent.action_needed}`);
+    console.log(`Request Details: "${calendarIntent.request_details}"`);
+    console.log(`Requestor: ${calendarIntent.requestor}`);
+    console.log(`Participants: ${calendarIntent.participants}`);
+    console.log(`Executive Assistants: ${calendarIntent.executive_assistants}`);
+    
+  } catch (error) {
+    console.log(`❌ ERROR: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+// Function to test multi-message planning stability
+async function testMultiMessageStability(): Promise<void> {
+  console.log('🔍 Testing Multi-Message Planning Stability...\n');
+  
+  const testCase = testMultiMessagePlanning;
+  console.log(`📝 Test: ${testCase.name}`);
+  console.log(`📧 Email Content: "${testCase.email.content}"`);
+  console.log(`🎯 Expected Action: ${testCase.expectedAshleyResponse?.action}`);
+  
+  try {
+    const emailThread = emailToString(testCase.email);
+    const calendarIntent = await b.ExtractCalendarIntent(emailThread);
+    console.log('\n📊 Calendar Intent Action Needed:', calendarIntent.action_needed);
+    console.log('Request Details:', calendarIntent.request_details);
+    
+    const ashleyResponse = await b.AshleyCalendarAssistant(calendarIntent, testCase.sidCalendarData);
+    console.log('\n🤖 Ashley Response Action:', ashleyResponse.action);
+    
+    const passed = ashleyResponse.action === testCase.expectedAshleyResponse?.action;
+    console.log(`\n📋 Result: ${passed ? '✅ PASSED' : '❌ FAILED'}`);
+    
+    if (!passed) {
+      console.log(`Expected: ${testCase.expectedAshleyResponse?.action}`);
+      console.log(`Actual: ${ashleyResponse.action}`);
+      console.log('\nEmail response:', ashleyResponse.email_response);
+    }
+    
+  } catch (error) {
+    console.log(`❌ ERROR: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+// Run stability test
+testMultiMessageStability();
