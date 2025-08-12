@@ -4,6 +4,7 @@ on:
     types: [opened, labeled]
 permissions:
   contents: write
+  issues: read
 jobs:
   create-branch:
     runs-on: ubuntu-latest
@@ -25,8 +26,30 @@ jobs:
           
           echo "Final output: $(cat $GITHUB_OUTPUT)"
           
+      - name: Checkout repository
+        if: steps.check_label.outputs.has_label == 'true'
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
       - name: Create branch for issue
         if: steps.check_label.outputs.has_label == 'true'
-        uses: robvanderleek/create-issue-branch@main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+        run: |
+          # Configure git
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Create branch name from issue number and title
+          BRANCH_NAME="feature/${ISSUE_NUMBER}-$(echo "${ISSUE_TITLE}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g')"
+          echo "Creating branch: $BRANCH_NAME"
+          
+          # Create and push branch
+          git checkout -b "$BRANCH_NAME"
+          git push origin "$BRANCH_NAME"
+          
+          # Comment on issue
+          gh issue comment $ISSUE_NUMBER --body "✅ Created branch \`$BRANCH_NAME\` for this issue."
