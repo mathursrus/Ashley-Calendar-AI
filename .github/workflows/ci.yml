@@ -16,7 +16,6 @@ jobs:
         with:
           node-version: '20'
       - run: npm install
-      - run: npm run generate
       - run: npm run lint
       - run: npm run build
       - run: chmod +x scripts/run-tests.sh
