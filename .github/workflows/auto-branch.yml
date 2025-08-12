@@ -4,36 +4,17 @@ on:
     types: [opened, labeled]
 permissions:
   contents: write
-  issues: read
 jobs:
   create-branch:
+    if: |
+      (github.event.action == 'opened' && contains(github.event.issue.labels.*.name, 'ready:design')) ||
+      (github.event.action == 'labeled' && github.event.label.name == 'ready:design')
     runs-on: ubuntu-latest
     steps:
-      - name: Check for ready:design label
-        id: check_label
-        run: |
-          echo "Issue labels JSON: ${{ toJson(github.event.issue.labels) }}"
-          
-          # Check if ready:design label exists
-          labels='${{ toJson(github.event.issue.labels) }}'
-          if echo "$labels" | jq -r '.[].name' | grep -q "ready:design"; then
-            echo "Label found: ready:design"
-            echo "has_label=true" >> $GITHUB_OUTPUT
-          else
-            echo "Label NOT found: ready:design"
-            echo "has_label=false" >> $GITHUB_OUTPUT
-          fi
-          
-          echo "Final output: $(cat $GITHUB_OUTPUT)"
-          
       - name: Checkout repository
-        if: steps.check_label.outputs.has_label == 'true'
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Create branch for issue
-        if: steps.check_label.outputs.has_label == 'true'
+        
+      - name: Create and push branch
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
@@ -51,5 +32,4 @@ jobs:
           git checkout -b "$BRANCH_NAME"
           git push origin "$BRANCH_NAME"
           
-          # Comment on issue
-          gh issue comment $ISSUE_NUMBER --body "✅ Created branch \`$BRANCH_NAME\` for this issue."
+          echo "✅ Successfully created and pushed branch: $BRANCH_NAME"
