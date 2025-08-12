@@ -20,3 +20,5 @@ This RFC is purely for testing automation - can be deleted after verification.
 **UPDATE 2**: Replaced peter-evans action with GitHub CLI for more reliable PR creation.
 
 **UPDATE 3**: Fixed checkout step to avoid branch confusion by checking out master first, then switching to feature branch.
+
+**UPDATE 4**: Removed checkout entirely and used pure API approach to avoid GitHub Actions checkout issues completely.
