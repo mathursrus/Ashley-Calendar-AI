@@ -1,4 +1,4 @@
-// Main location service that orchestrates location detection and Google Meet integration
+// Main location service for calendar invite location enhancement
 
 import { LocationService, LocationDetectionResult, MeetingLocation, GoogleMeetConfig, CalendarEventWithLocation } from './location-types';
 import { LocationDetector } from './location-detector';
@@ -60,23 +60,20 @@ export class LocationServiceImpl implements LocationService {
       const meetConfig = await this.generateGoogleMeetLink();
       return {
         ...baseEvent,
-        location: location.address || 'Virtual Meeting',
+        location: 'Virtual Meeting',
         conferenceData: meetConfig
       };
     }
   }
 
   /**
-   * Determine the best location for a meeting based on email content and context
+   * Determine the best location for a meeting based on email content
    */
-  async determineBestLocation(
-    emailContent: string,
-    participantCount: number = 1
-  ): Promise<MeetingLocation> {
+  async determineBestLocation(emailContent: string): Promise<MeetingLocation> {
     const detectionResult = this.detectLocation(emailContent);
 
-    // If we detected a physical location with high confidence, use it
-    if (detectionResult.location?.type === 'physical' && detectionResult.confidence >= 70) {
+    // If we detected a physical location with decent confidence, use it
+    if (detectionResult.location?.type === 'physical' && detectionResult.confidence >= 60) {
       console.log(`📍 Using detected physical location: ${detectionResult.location.address}`);
       return detectionResult.location;
     }
@@ -87,7 +84,7 @@ export class LocationServiceImpl implements LocationService {
       return detectionResult.location;
     }
 
-    // Default to virtual meeting with Google Meet for convenience
+    // Default to virtual meeting with Google Meet
     console.log('🔗 Defaulting to virtual meeting with Google Meet');
     return {
       type: 'virtual',
@@ -133,54 +130,9 @@ export class LocationServiceImpl implements LocationService {
    * Extract display name from email address
    */
   private extractDisplayName(email: string): string | undefined {
-    // Simple extraction - could be enhanced with contact lookup
     const localPart = email.split('@')[0];
     return localPart.split('.').map(part => 
       part.charAt(0).toUpperCase() + part.slice(1)
     ).join(' ');
-  }
-
-  /**
-   * Enhanced location detection with context awareness
-   */
-  async detectLocationWithContext(
-    emailContent: string,
-    senderEmail: string,
-    participantEmails: string[]
-  ): Promise<LocationDetectionResult> {
-    const baseResult = this.detectLocation(emailContent);
-
-    // Enhance confidence based on context
-    let enhancedConfidence = baseResult.confidence;
-    const enhancedKeywords = [...baseResult.detectedKeywords];
-
-    // If sender is from same domain as participants, physical meetings more likely
-    const senderDomain = senderEmail.split('@')[1];
-    const participantDomains = participantEmails.map(email => email.split('@')[1]);
-    const sameDomainCount = participantDomains.filter(domain => domain === senderDomain).length;
-    
-    if (sameDomainCount > 0 && baseResult.location?.type === 'physical') {
-      enhancedConfidence += 10;
-      enhancedKeywords.push('same-domain-participants');
-    }
-
-    // If many external participants, virtual meetings more likely
-    if (participantEmails.length > 3 && !baseResult.location) {
-      return {
-        location: {
-          type: 'virtual',
-          notes: 'Large meeting - defaulting to virtual'
-        },
-        confidence: 75,
-        detectedKeywords: ['large-meeting', ...enhancedKeywords],
-        source: 'default'
-      };
-    }
-
-    return {
-      ...baseResult,
-      confidence: Math.min(enhancedConfidence, 95),
-      detectedKeywords: enhancedKeywords
-    };
   }
 }
