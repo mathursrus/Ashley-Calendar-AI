@@ -90,24 +90,21 @@ interface CalendarEvent {
 
 ### User Flows
 
-#### Siri/Voice Flow
+#### Email Flow
 1. **Virtual Meeting (Default):**
-   - "Hey Siri, ask Ashley to schedule a meeting with John tomorrow at 2pm"
+   - Email request: "Please schedule a meeting with John tomorrow at 2pm"
    - Ashley auto-generates Google Meet link
-   - Response: "Meeting scheduled with Google Meet link included"
+   - Calendar invite includes meeting link and location details
 
 2. **Physical Meeting:**
-   - "Hey Siri, ask Ashley to schedule a meeting with John at the office tomorrow at 2pm"
+   - Email request: "Please schedule a meeting with John at the office tomorrow at 2pm"
    - Ashley detects "at the office" and sets physical location
-   - Response: "Meeting scheduled at the office"
+   - Calendar invite includes office address
 
-#### Email Flow
-1. **Email Request:** "Please schedule a meeting with the team for next week"
-2. **Ashley Processing:** Defaults to virtual meeting with Google Meet
-3. **Calendar Invite:** Includes auto-generated meeting link
-
-#### Slack Flow
-Similar to email, with default virtual meeting creation and Google Meet integration.
+3. **Ambiguous Request:**
+   - Email request: "Please schedule a meeting with the team for next week"
+   - Ashley defaults to virtual meeting with Google Meet
+   - Calendar invite includes auto-generated meeting link
 
 ### Failure Modes & Timeouts
 - **Google Meet API Failure:** Fall back to manual link generation or note in description
@@ -147,24 +144,16 @@ Similar to email, with default virtual meeting creation and Google Meet integrat
 - **Mitigation:** Conservative defaults (virtual), clear confirmation messages
 
 **Risk:** Breaking existing calendar integrations
-- **Mitigation:** Gradual rollout, backward compatibility testing
+- **Mitigation:** Backward compatibility testing, gradual feature enablement
 
-## Rollout Plan
+## Implementation Plan
 
-### Phase 1: Foundation (Week 1-2)
+### Immediate Implementation
 - Implement Google Meet integration for virtual meetings
 - Add location field to calendar event creation
-- Feature flag: `enable_meeting_locations` (default: false)
-
-### Phase 2: Natural Language Processing (Week 3-4)
-- Add location detection from user input
-- Implement physical vs virtual meeting classification
-- Feature flag: `enable_smart_location_detection` (default: false)
-
-### Phase 3: Full Rollout (Week 5-6)
-- Enable features for all users
-- Monitor success metrics
-- Gather user feedback
+- Enable features by default with feature flags: `enable_meeting_locations=true`, `enable_smart_location_detection=true`
+- Deploy natural language processing for location detection
+- Implement comprehensive error handling and fallbacks
 
 ### Success Metrics
 - 95%+ of calendar invites include location information
@@ -176,3 +165,4 @@ Similar to email, with default virtual meeting creation and Google Meet integrat
 - No data migration required (new feature)
 - Existing meetings remain unchanged
 - New meetings automatically include location enhancement
+- Monitor success metrics and user feedback for immediate adjustments
