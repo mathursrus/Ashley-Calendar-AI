@@ -6,12 +6,19 @@ permissions:
   contents: write
 jobs:
   create-branch:
-    if: |
-      (github.event.action == 'opened' && contains(github.event.issue.labels.*.name, 'ready:design')) ||
-      (github.event.action == 'labeled' && github.event.label.name == 'ready:design')
     runs-on: ubuntu-latest
     steps:
+      - name: Check for ready:design label
+        id: check_label
+        run: |
+          echo "Issue labels: ${{ toJson(github.event.issue.labels) }}"
+          if echo '${{ toJson(github.event.issue.labels) }}' | grep -q '"name":"ready:design"'; then
+            echo "has_label=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_label=false" >> $GITHUB_OUTPUT
+          fi
       - name: Create branch for issue
+        if: steps.check_label.outputs.has_label == 'true'
         uses: robvanderleek/create-issue-branch@v1
         with:
           branchName: 'feature/${issue.number}-${issue.title, kebabcase}'
