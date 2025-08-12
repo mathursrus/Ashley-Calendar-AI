@@ -26,5 +26,6 @@ jobs:
           title: "RFC: ${{ github.ref_name }}"
           body: "Linked issue: #${{ steps.vars.outputs.issue }}"
           labels: "type:design,needs:review"
+          base: master
           branch: "${{ github.ref_name }}"
           delete-branch: false
