@@ -30,5 +30,3 @@ jobs:
         uses: robvanderleek/create-issue-branch@main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          branchName: 'feature/${issue.number}-${issue.title, kebabcase}'
