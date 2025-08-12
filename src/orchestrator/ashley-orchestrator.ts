@@ -5,6 +5,9 @@ import { gmail_v1, google } from 'googleapis';
 import { CalendarDataService } from '../calendar-services/calendar-data-service';
 import { CalendarIntent, AshleyResponse } from '../../baml_client/types';
 import { b } from '../../baml_client';
+import { TimezoneDetector, TimezoneConverter, TimezoneInfo, ParticipantTimezone } from '../timezone/timezone-utils';
+import { LocationServiceImpl } from '../location/location-service';
+import { MeetingLocation, CalendarEventDetails } from '../calendar-services/calendar-types';
 
 // Load environment variables
 dotenv.config();
@@ -25,6 +28,7 @@ export interface EmailData {
 export class AshleyOrchestrator {
   private gmail: gmail_v1.Gmail;
   private calendarDataService: CalendarDataService;
+  private locationService: LocationServiceImpl;
   private lastProcessedEmailId: string | null = null;
 
   constructor() {
@@ -57,6 +61,7 @@ export class AshleyOrchestrator {
 
     this.gmail = google.gmail({ version: 'v1', auth });
     this.calendarDataService = new CalendarDataService();
+    this.locationService = new LocationServiceImpl();
   }
 
   /**
@@ -100,8 +105,15 @@ export class AshleyOrchestrator {
         return;
       }
 
-      // Step 2: Analyze email for calendar intent (replaces "Summarize Request")
-      const calendarIntent = await this.analyzeCalendarIntent(email);
+      // Step 2: Detect timezone from email (NEW: timezone awareness)
+      const emailHeaders = this.extractEmailHeaders(email);
+      const emailContent = this.extractEmailContent(email);
+      const senderTimezone = TimezoneDetector.detectTimezone(emailHeaders, emailContent);
+      
+      console.log(`🌍 Detected timezone: ${senderTimezone.detectedTimezone} (confidence: ${senderTimezone.confidence}, source: ${senderTimezone.source})`);
+
+      // Step 3: Analyze email for calendar intent (replaces "Summarize Request")
+      const calendarIntent = await this.analyzeCalendarIntentWithTimezone(email, senderTimezone);
       
       if (!calendarIntent.action_needed) {
         console.log('ℹ️ No action needed for this email');
@@ -109,40 +121,44 @@ export class AshleyOrchestrator {
         return;
       }
 
-      console.log(`🎯 Action needed! Requestor: ${calendarIntent.requestor}`);
+      console.log(`📋 Action needed: ${calendarIntent.action_needed}`);
 
-      // Step 3: Get Sid's calendar availability (replaces "Get Availability")
-      const calendarData = await this.getSidCalendarData(
-        calendarIntent.timerange_start,
-        calendarIntent.timerange_end
+      // Step 4: Get calendar data based on timezone-aware times
+      const startTime = calendarIntent.start_time || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      const endTime = calendarIntent.end_time || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      
+      // Get participant timezones for multi-timezone coordination
+      const participantEmails = calendarIntent.participants?.split(',').map(p => p.trim()) || [];
+      const participantTimezones = await Promise.all(
+        participantEmails.map(async email => {
+          // For now, use sender timezone as fallback for participants
+          // In future, could implement participant timezone detection
+          return {
+            email,
+            timezone: senderTimezone.detectedTimezone,
+            confidence: senderTimezone.confidence * 0.8 // Slightly lower confidence for participants
+          };
+        })
       );
 
-      // Step 4: Get participant calendar data if available
-      const participantCalendarData = await this.getParticipantCalendarData(
-        calendarIntent.participants,
-        calendarIntent.timerange_start,
-        calendarIntent.timerange_end
+      const calendarData = await this.getSidCalendarData(startTime, endTime);
+      
+      // Step 5: Generate Ashley's response with timezone awareness
+      const ashleyResponse = await this.generateAshleyResponseWithTimezone(
+        calendarIntent, 
+        calendarData, 
+        senderTimezone,
+        participantTimezones
       );
 
-      // Step 5: Generate Ashley's response (replaces "Construct email and invite")
-      const ashleyResponse = await this.generateAshleyResponse(
-        calendarIntent,
-        calendarData + participantCalendarData
-      );
-
-      console.log(`📝 Ashley's action: ${ashleyResponse.action}`);
-
-      // Step 6: Log to Airtable for review (replaces Airtable node)
-      await this.logToAirtable(email, calendarIntent, ashleyResponse);
-
-      // Step 7: Execute Ashley's response (send email, create calendar invite)
+      // Step 6: Execute Ashley's response (send email, create calendar invite)
       await this.executeAshleyResponse(email, ashleyResponse);
 
-      console.log('✅ Email processed successfully');
+      // Step 7: Log to Airtable
+      await this.logToAirtable(email, calendarIntent, ashleyResponse);
 
     } catch (error) {
       console.error(`❌ Error processing email ${email.id}:`, error);
-      // Log error to Airtable for review
       await this.logErrorToAirtable(email, error);
     }
   }
@@ -152,36 +168,47 @@ export class AshleyOrchestrator {
    */
   private async getNewEmails(): Promise<EmailData[]> {
     try {
-      // Get list of messages
+      // Get list of messages (only new ones since last processed)
+      const query = this.lastProcessedEmailId 
+        ? `is:unread after:${this.lastProcessedEmailId}`
+        : 'is:unread';
+
       const response = await this.gmail.users.messages.list({
         userId: 'me',
-        q: 'is:unread', // Only unread emails
+        q: query,
         maxResults: 10
       });
 
-      const messages = response.data.messages || [];
+      if (!response.data.messages || response.data.messages.length === 0) {
+        return [];
+      }
+
+      // Get full message data for each email
       const emails: EmailData[] = [];
+      for (const message of response.data.messages) {
+        if (message.id) {
+          const fullMessage = await this.gmail.users.messages.get({
+            userId: 'me',
+            id: message.id,
+            format: 'full'
+          });
 
-      for (const message of messages) {
-        if (!message.id) continue;
-
-        // Get full email content
-        const fullEmail = await this.gmail.users.messages.get({
-          userId: 'me',
-          id: message.id,
-          format: 'full'
-        });
-
-        const emailData = this.parseEmailData(fullEmail.data);
-        if (emailData) {
-          emails.push(emailData);
+          const emailData = this.parseEmailData(fullMessage.data);
+          if (emailData) {
+            emails.push(emailData);
+          }
         }
+      }
+
+      // Update last processed email ID
+      if (emails.length > 0) {
+        this.lastProcessedEmailId = emails[emails.length - 1].id;
       }
 
       return emails;
 
     } catch (error) {
-      console.error('❌ Error getting emails from Gmail:', error);
+      console.error('❌ Error fetching emails from Gmail:', error);
       return [];
     }
   }
@@ -190,19 +217,20 @@ export class AshleyOrchestrator {
    * Parse Gmail API response into EmailData (replaces "Reconstruct body")
    */
   private parseEmailData(message: gmail_v1.Schema$Message): EmailData | null {
-    if (!message.id || !message.payload) return null;
+    if (!message.id || !message.payload?.headers) {
+      return null;
+    }
 
-    const headers = message.payload.headers || [];
     const getHeader = (name: string) => 
-      headers.find(h => h.name?.toLowerCase() === name.toLowerCase())?.value || '';
+      message.payload?.headers?.find(h => h.name?.toLowerCase() === name.toLowerCase())?.value || '';
 
     return {
       id: message.id,
-      from: getHeader('From'),
-      to: getHeader('To'),
-      cc: getHeader('Cc'),
-      subject: getHeader('Subject'),
-      snippet: this.extractPlainTextFromPayload(message.payload),
+      from: getHeader('from'),
+      to: getHeader('to'),
+      cc: getHeader('cc'),
+      subject: getHeader('subject'),
+      snippet: message.snippet || '',
       internalDate: message.internalDate || '',
       threadId: message.threadId || ''
     };
@@ -212,52 +240,43 @@ export class AshleyOrchestrator {
    * Extract plain text from email payload (replaces N8n code node logic)
    */
   private extractPlainTextFromPayload(payload: gmail_v1.Schema$MessagePart): string {
-    if (!payload) return '[No payload]';
+    let text = '';
 
     // Helper function to decode base64
     const decodeBase64 = (str: string): string => {
-      return Buffer.from(str.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf-8');
+      return Buffer.from(str, 'base64').toString('utf-8');
     };
 
-    // Check for multipart
+    if (payload.body?.data) {
+      // Direct text content
+      text += decodeBase64(payload.body.data);
+    }
+
     if (payload.parts) {
+      // Multi-part message
       for (const part of payload.parts) {
         if (part.mimeType === 'text/plain' && part.body?.data) {
-          return this.cleanEmailText(decodeBase64(part.body.data));
-        }
-        // Check nested parts
-        if (part.parts) {
-          for (const nested of part.parts) {
-            if (nested.mimeType === 'text/plain' && nested.body?.data) {
-              return this.cleanEmailText(decodeBase64(nested.body.data));
-            }
-          }
+          text += decodeBase64(part.body.data);
+        } else if (part.parts) {
+          // Nested parts
+          text += this.extractPlainTextFromPayload(part);
         }
       }
     }
 
-    // Check direct body
-    if (payload.body?.data) {
-      return this.cleanEmailText(decodeBase64(payload.body.data));
-    }
-
-    return '[No readable plain text found]';
+    return text;
   }
 
   /**
    * Clean email text (replaces N8n cleanText function)
    */
   private cleanEmailText(text: string): string {
-    if (!text || typeof text !== 'string') return text;
-
     return text
-      // Remove <https://...> style links
-      .replace(/<https?:\/\/[^>\s]+>/gi, '')
-      // Collapse long repeated newlines
-      .replace(/\r?\n\s*\r?\n\s*\r?\n/g, '\n\n')
-      // Remove quote markers
-      .replace(/^>\s*/gm, '')
-      .replace(/>>/g, '')
+      .replace(/\r\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .replace(/^\s*>.*$/gm, '') // Remove quoted text
+      .replace(/^\s*On .* wrote:.*$/gm, '') // Remove "On ... wrote:" lines
+      .replace(/\s{2,}/g, ' ')
       .trim();
   }
 
@@ -265,25 +284,158 @@ export class AshleyOrchestrator {
    * Check if email is from Ashley herself (replaces "Don't respond to self")
    */
   private isFromAshley(email: EmailData): boolean {
-    return email.from.includes('ashley.sidsai@gmail.com');
+    const ashleyEmails = ['ashley@example.com', 'sid.mathur@gmail.com']; // Add Ashley's actual emails
+    return ashleyEmails.some(ashleyEmail => 
+      email.from.toLowerCase().includes(ashleyEmail.toLowerCase())
+    );
+  }
+
+  /**
+   * Extract email headers for timezone detection
+   */
+  private extractEmailHeaders(email: EmailData): Record<string, string> {
+    return {
+      'X-Originating-IP': '', // Would be extracted from full headers if available
+      'Received': '',
+      'Date': email.internalDate,
+      'From': email.from,
+      'To': email.to
+    };
+  }
+
+  /**
+   * Extract email content for timezone detection
+   */
+  private extractEmailContent(email: EmailData): string {
+    // For now, use snippet. In full implementation, would extract full body
+    return this.cleanEmailText(email.snippet + ' ' + email.subject);
+  }
+
+  /**
+   * Analyze email for calendar intent with timezone awareness
+   */
+  private async analyzeCalendarIntentWithTimezone(
+    email: EmailData,
+    senderTimezone: TimezoneInfo
+  ): Promise<CalendarIntent> {
+    const emailText = this.formatEmailForBAML(email);
+    
+    // Include timezone context in the analysis
+    const timezoneContext = `
+Sender timezone: ${senderTimezone.detectedTimezone} (confidence: ${senderTimezone.confidence}%)
+Timezone detection source: ${senderTimezone.source}
+Current time in sender's timezone: ${new Date().toLocaleString('en-US', { timeZone: senderTimezone.detectedTimezone })}
+`;
+
+    const enhancedEmailText = timezoneContext + '\n\n' + emailText;
+    
+    const response = await b.CalendarIntentAnalyzer(enhancedEmailText);
+    return response;
+  }
+
+  /**
+   * Generate Ashley's response with timezone awareness
+   */
+  private async generateAshleyResponseWithTimezone(
+    calendarIntent: CalendarIntent,
+    calendarData: string,
+    senderTimezone: TimezoneInfo,
+    participantTimezones: ParticipantTimezone[]
+  ): Promise<AshleyResponse> {
+    // Convert times to multiple timezones if needed
+    let timezonedTimes: any[] = [];
+    
+    if (calendarIntent.start_time && calendarIntent.end_time) {
+      const startTime = new Date(calendarIntent.start_time);
+      const endTime = new Date(calendarIntent.end_time);
+      
+      // Convert to all participant timezones
+      const uniqueTimezones = [...new Set([
+        senderTimezone.detectedTimezone,
+        ...participantTimezones.map(pt => pt.timezone)
+      ])];
+      
+      timezonedTimes = uniqueTimezones.map(tz => ({
+        timezone: tz,
+        start: TimezoneConverter.convertToTimezone(startTime, tz),
+        end: TimezoneConverter.convertToTimezone(endTime, tz),
+        formatted_start: startTime.toLocaleString('en-US', { timeZone: tz }),
+        formatted_end: endTime.toLocaleString('en-US', { timeZone: tz })
+      }));
+    }
+
+    // Enhance calendar data with timezone information
+    const enhancedCalendarData = this.enhanceCalendarDataWithTimezones(
+      calendarData, 
+      timezonedTimes, 
+      participantTimezones
+    );
+    
+    const response = await b.AshleyCalendarAssistant(calendarIntent, enhancedCalendarData);
+    
+    return response;
+  }
+
+  /**
+   * Format email for BAML analysis
+   */
+  private formatEmailForBAML(email: EmailData): string {
+    return `
+From: ${email.from}
+To: ${email.to}
+Subject: ${email.subject}
+Content: ${email.snippet}
+    `.trim();
+  }
+
+  /**
+   * Check if email content has explicit timezone mentions
+   */
+  private hasExplicitTimezoneInContent(content: string): boolean {
+    const timezonePatterns = [
+      /\b(PST|PDT|EST|EDT|CST|CDT|MST|MDT)\b/i,
+      /\b(Pacific|Eastern|Central|Mountain)\s+(Standard|Daylight)\s+Time\b/i,
+      /\b(UTC|GMT)[+-]?\d{1,2}\b/i,
+      /\btimezone\b/i
+    ];
+    
+    return timezonePatterns.some(pattern => pattern.test(content));
+  }
+
+  /**
+   * Enhance calendar data with timezone information for multi-participant coordination
+   */
+  private enhanceCalendarDataWithTimezones(
+    calendarData: string,
+    timezonedTimes: any[],
+    participantTimezones: ParticipantTimezone[]
+  ): string {
+    let enhanced = calendarData;
+    
+    if (timezonedTimes.length > 1) {
+      enhanced += '\n\nMEETING TIMES IN PARTICIPANT TIMEZONES:\n';
+      timezonedTimes.forEach(tt => {
+        enhanced += `- ${tt.timezone}: ${tt.formatted_start} - ${tt.formatted_end}\n`;
+      });
+    }
+    
+    if (participantTimezones.length > 0) {
+      enhanced += '\n\nPARTICIPANT TIMEZONE INFO:\n';
+      participantTimezones.forEach(pt => {
+        enhanced += `- ${pt.email}: ${pt.timezone} (confidence: ${pt.confidence}%)\n`;
+      });
+    }
+    
+    return enhanced;
   }
 
   /**
    * Analyze email for calendar intent using BAML (replaces "Summarize Request")
    */
   private async analyzeCalendarIntent(email: EmailData): Promise<CalendarIntent> {
-    // Format email as thread string for BAML
-    const emailThread = `From: ${email.from}
-To: ${email.to}
-Cc: ${email.cc || ''}
-Date: ${new Date(parseInt(email.internalDate)).toISOString().slice(0, 19).replace('T', ' ')}
-Subject: ${email.subject}
-Content: ${email.snippet}`;
-
-    // Use BAML to extract calendar intent from email
-    const calendarIntent = await b.ExtractCalendarIntent(emailThread);
-    
-    return calendarIntent;
+    const emailText = this.formatEmailForBAML(email);
+    const response = await b.CalendarIntentAnalyzer(emailText);
+    return response;
   }
 
   /**
@@ -291,49 +443,39 @@ Content: ${email.snippet}`;
    */
   private async getSidCalendarData(startTime: string, endTime: string): Promise<string> {
     try {
-      // Initialize Google Calendar API with API key
-      if (!process.env.SID_CALENDAR_API_KEY) {
-        throw new Error('SID_CALENDAR_API_KEY not found in environment variables');
-      }
-      
-      const calendar = google.calendar({ 
-        version: 'v3', 
-        auth: process.env.SID_CALENDAR_API_KEY 
-      });
+      const startDate = new Date(startTime);
+      const endDate = new Date(endTime);
 
-      // Convert time strings to ISO format
-      const timeMin = new Date(startTime).toISOString();
-      const timeMax = new Date(endTime).toISOString();
+      console.log(`📅 Getting Sid's calendar data from ${startDate.toISOString()} to ${endDate.toISOString()}`);
 
-      // Get Sid's calendar free/busy information
-      const freeBusyResponse = await calendar.freebusy.query({
-        requestBody: {
-          timeMin,
-          timeMax,
-          items: [{ id: 'sid.mathur@gmail.com' }]
-        }
-      });
+      // Get Sid's availability using the calendar data service
+      const availabilityResult = await this.calendarDataService.getAvailability(
+        ['sid.mathur@gmail.com'], // Sid's email
+        startDate,
+        endDate
+      );
 
-      const busyTimes = freeBusyResponse.data.calendars?.['sid.mathur@gmail.com']?.busy || [];
+      // Format the result for BAML
+      let formattedData = `AVAILABILITY SUMMARY:\n${availabilityResult.summary}\n\n`;
       
-      let calendarData = `Sid's Calendar Data (${startTime} to ${endTime}):\n`;
-      
-      if (busyTimes.length === 0) {
-        calendarData += '- Available for meetings\n- No conflicts found in requested time range';
-      } else {
-        calendarData += '- Busy times found:\n';
-        busyTimes.forEach((busy, index) => {
-          const start = new Date(busy.start!).toLocaleString();
-          const end = new Date(busy.end!).toLocaleString();
-          calendarData += `  ${index + 1}. ${start} - ${end}\n`;
+      if (availabilityResult.commonAvailableSlots.length > 0) {
+        formattedData += 'AVAILABLE TIME SLOTS:\n';
+        availabilityResult.commonAvailableSlots.forEach((slot, index) => {
+          formattedData += `${index + 1}. ${slot.start.toLocaleString()} - ${slot.end.toLocaleString()} (${slot.duration} minutes)\n`;
         });
+      } else {
+        formattedData += 'No common available slots found in the requested time range.\n';
       }
 
-      return calendarData;
+      if (availabilityResult.requiresManualCoordination.length > 0) {
+        formattedData += `\nREQUIRES MANUAL COORDINATION: ${availabilityResult.requiresManualCoordination.join(', ')}\n`;
+      }
+
+      return formattedData;
 
     } catch (error) {
       console.error('❌ Error getting Sid\'s calendar data:', error);
-      return `Sid's Calendar Data (${startTime} to ${endTime}):\n- Error accessing calendar: ${error}\n- Falling back to manual scheduling`;
+      return `Error retrieving calendar data: ${error instanceof Error ? error.message : 'Unknown error'}`;
     }
   }
 
@@ -345,17 +487,23 @@ Content: ${email.snippet}`;
     startTime: string,
     endTime: string
   ): Promise<string> {
-    if (!participants) return '';
+    try {
+      const participantEmails = participants.split(',').map(email => email.trim());
+      const startDate = new Date(startTime);
+      const endDate = new Date(endTime);
 
-    const participantEmails = participants.split(',').map(email => email.trim());
-    const start = new Date(startTime);
-    const end = new Date(endTime);
+      const availabilityResult = await this.calendarDataService.getAvailability(
+        participantEmails,
+        startDate,
+        endDate
+      );
 
-    return await this.calendarDataService.gatherParticipantCalendarData(
-      participantEmails,
-      start,
-      end
-    );
+      return availabilityResult.summary;
+
+    } catch (error) {
+      console.error('❌ Error getting participant calendar data:', error);
+      return `Error retrieving participant data: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    }
   }
 
   /**
@@ -365,7 +513,6 @@ Content: ${email.snippet}`;
     calendarIntent: CalendarIntent,
     calendarData: string
   ): Promise<AshleyResponse> {
-    // Use BAML directly with the CalendarIntent
     const response = await b.AshleyCalendarAssistant(calendarIntent, calendarData);
     
     // Return the response directly - no need to transform since it's already the right type
@@ -385,7 +532,7 @@ Content: ${email.snippet}`;
 
     // Create calendar invite if needed
     if (response.send_calendar_invite && response.action === 'BookTime') {
-      await this.createCalendarInvite(response);
+      await this.createCalendarInviteWithLocation(email, response);
     }
   }
 
@@ -421,19 +568,84 @@ Content: ${email.snippet}`;
   }
 
   /**
-   * Create calendar invite via Google Calendar
+   * Create calendar invite with location enhancement
    */
-  private async createCalendarInvite(response: AshleyResponse): Promise<void> {
+  private async createCalendarInviteWithLocation(email: EmailData, response: AshleyResponse): Promise<void> {
     try {
-      // TODO: Implement Google Calendar invite creation
-      console.log('📅 Calendar invite creation not yet implemented');
+      console.log('📅 Creating calendar invite with location enhancement...');
+
+      // Extract email content for location detection
+      const emailContent = this.extractEmailContent(email);
+      const participantEmails = response.participants_to_invite?.split(',').map(p => p.trim()) || [];
+
+      // Detect location with context awareness
+      const locationResult = await this.locationService.detectLocationWithContext(
+        emailContent,
+        email.from,
+        participantEmails
+      );
+
+      console.log(`📍 Location detection result: ${locationResult.location?.type || 'none'} (confidence: ${locationResult.confidence}%)`);
+
+      // Determine the best location for this meeting
+      const bestLocation = await this.locationService.determineBestLocation(
+        emailContent,
+        participantEmails.length + 1 // +1 for sender
+      );
+
+      // Create calendar event details
+      const eventDetails: CalendarEventDetails = {
+        summary: response.calendar_invite_subject || 'Meeting',
+        description: response.email_response || 'Meeting scheduled by Ashley',
+        start_time: response.meeting_start_time || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        end_time: response.meeting_end_time || new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString(),
+        timezone: 'America/Los_Angeles', // Could be enhanced with timezone detection
+        attendees: [email.from, ...participantEmails],
+        location: bestLocation
+      };
+
+      // Create calendar event with location
+      const calendarEvent = await this.locationService.createCalendarEventWithLocation(
+        eventDetails,
+        bestLocation
+      );
+
+      // Create the actual calendar event
+      const createdEvent = await this.locationService.createCalendarEvent(calendarEvent);
+
+      console.log('✅ Calendar invite created successfully with location enhancement');
+      console.log(`   Event ID: ${createdEvent.id}`);
+      console.log(`   Location Type: ${bestLocation.type}`);
+      if (bestLocation.type === 'physical') {
+        console.log(`   Address: ${bestLocation.address}`);
+      } else {
+        console.log(`   Google Meet Link: ${createdEvent.conferenceData?.entryPoints?.[0]?.uri || 'Will be generated'}`);
+      }
+
+    } catch (error) {
+      console.error('❌ Error creating calendar invite with location:', error);
+      // Fallback to basic calendar invite creation
+      await this.createBasicCalendarInvite(response);
+    }
+  }
+
+  /**
+   * Fallback method for basic calendar invite creation
+   */
+  private async createBasicCalendarInvite(response: AshleyResponse): Promise<void> {
+    try {
+      console.log('📅 Creating basic calendar invite (fallback)...');
       console.log(`   Subject: ${response.calendar_invite_subject}`);
       console.log(`   Start: ${response.meeting_start_time}`);
       console.log(`   End: ${response.meeting_end_time}`);
       console.log(`   Participants: ${response.participants_to_invite}`);
 
+      // This would be implemented with basic Google Calendar API calls
+      // For now, just log the details
+      console.log('⚠️ Basic calendar invite creation not yet fully implemented');
+
     } catch (error) {
-      console.error('❌ Error creating calendar invite:', error);
+      console.error('❌ Error creating basic calendar invite:', error);
     }
   }
 
