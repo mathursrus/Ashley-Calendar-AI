@@ -1,6 +1,7 @@
 // Google Calendar API service implementation
 
 import { CalendarService, FreeBusyResult, BusySlot } from './calendar-types';
+import { google } from 'googleapis';
 
 export class GoogleCalendarService implements CalendarService {
   private apiKey: string | undefined;
@@ -10,88 +11,71 @@ export class GoogleCalendarService implements CalendarService {
   constructor() {
     this.apiKey = process.env.GOOGLE_CALENDAR_API_KEY;
     this.serviceAccountPath = process.env.GOOGLE_SERVICE_ACCOUNT_PATH;
-    // Enable real API if credentials are available
-    this.useRealApi = !!(this.apiKey || this.serviceAccountPath);
+    this.useRealApi = process.env.USE_REAL_CALENDAR_API === 'true';
   }
 
-  async getFreeBusy(
-    email: string,
+  async createEvent(
+    summary: string,
+    description: string,
     startTime: Date,
-    endTime: Date
-  ): Promise<FreeBusyResult> {
-    try {
-      // Check if we have credentials configured
-      if (!this.apiKey && !this.serviceAccountPath) {
-        return {
-          email,
-          status: 'access_denied',
-          errorMessage: 'Google Calendar API credentials not configured'
-        };
-      }
-
-      // Use real API if credentials are available, otherwise use mock
-      if (this.useRealApi) {
-        console.log(`🔗 Attempting real Google Calendar API call for ${email}...`);
-        const realResult = await this.realGoogleCalendarCall(email, startTime, endTime);
-        return realResult;
-      } else {
-        console.log(`🎭 Using mock Google Calendar data for ${email}...`);
-        const mockResult = await this.mockGoogleCalendarCall(email, startTime, endTime);
-        return mockResult;
-      }
-
-    } catch (error) {
-      return {
-        email,
-        status: 'error',
-        errorMessage: error instanceof Error ? error.message : 'Unknown error'
-      };
+    endTime: Date,
+    attendeeEmails: string[],
+    location?: string,
+    meetingLink?: string
+  ): Promise<string> {
+    if (!this.useRealApi) {
+      console.log('[MOCK] Creating calendar event:', {
+        summary,
+        description,
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        attendees: attendeeEmails,
+        location,
+        meetingLink
+      });
+      return 'mock-event-id-' + Date.now();
     }
+
+    // Real API implementation would go here
+    throw new Error('Real Google Calendar API not implemented yet');
   }
 
-  private async mockGoogleCalendarCall(
-    email: string,
-    startTime: Date,
-    endTime: Date
-  ): Promise<FreeBusyResult> {
-    // Simulate different scenarios based on email domain
-    if (email.includes('@company.com')) {
-      // Simulate successful API access for company emails
-      const busySlots: BusySlot[] = [
-        {
-          start: new Date('2025-08-13T10:00:00-07:00'),
-          end: new Date('2025-08-13T11:00:00-07:00'),
-          status: 'busy'
-        },
-        {
-          start: new Date('2025-08-13T14:00:00-07:00'),
-          end: new Date('2025-08-13T15:30:00-07:00'),
-          status: 'busy'
-        }
-      ];
-
-      return {
-        email,
-        status: 'success',
-        busySlots
-      };
-    } else {
-      // Simulate access denied for external emails
-      return {
-        email,
-        status: 'access_denied',
-        errorMessage: 'Calendar sharing not enabled for external participant'
-      };
+  async updateEvent(
+    eventId: string,
+    updates: {
+      summary?: string;
+      description?: string;
+      startTime?: Date;
+      endTime?: Date;
+      attendeeEmails?: string[];
+      location?: string;
+      meetingLink?: string;
     }
+  ): Promise<void> {
+    if (!this.useRealApi) {
+      console.log('[MOCK] Updating calendar event:', eventId, updates);
+      return;
+    }
+
+    // Real API implementation would go here
+    throw new Error('Real Google Calendar API not implemented yet');
   }
 
-  // Real Google Calendar API implementation
-  private async realGoogleCalendarCall(
+  async deleteEvent(eventId: string): Promise<void> {
+    if (!this.useRealApi) {
+      console.log('[MOCK] Deleting calendar event:', eventId);
+      return;
+    }
+
+    // Real API implementation would go here
+    throw new Error('Real Google Calendar API not implemented yet');
+  }
+
+  async checkAvailability(
     email: string,
     startTime: Date,
     endTime: Date
   ): Promise<FreeBusyResult> {
-    const { google } = require('googleapis');
     
     try {
       // Initialize auth (API key or service account)
@@ -99,19 +83,36 @@ export class GoogleCalendarService implements CalendarService {
       if (this.serviceAccountPath) {
         auth = new google.auth.GoogleAuth({
           keyFile: this.serviceAccountPath,
-          scopes: ['https://www.googleapis.com/auth/calendar.freebusy']
+          scopes: ['https://www.googleapis.com/auth/calendar.readonly']
         });
       } else if (this.apiKey) {
         auth = this.apiKey;
       } else {
-        throw new Error('No valid authentication method available');
+        throw new Error('No Google Calendar API credentials configured');
       }
 
       const calendar = google.calendar({ version: 'v3', auth });
 
-      console.log(`📡 Making Google Calendar API request for ${email}...`);
-      console.log(`   Time range: ${startTime.toISOString()} to ${endTime.toISOString()}`);
+      if (!this.useRealApi) {
+        console.log('[MOCK] Checking availability for:', {
+          email,
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString()
+        });
+        
+        // Return mock busy periods
+        return {
+          email,
+          busy: [
+            {
+              start: new Date(startTime.getTime() + 60 * 60 * 1000), // 1 hour after start
+              end: new Date(startTime.getTime() + 2 * 60 * 60 * 1000)   // 2 hours after start
+            }
+          ]
+        };
+      }
 
+      // Real API call
       const response = await calendar.freebusy.query({
         requestBody: {
           timeMin: startTime.toISOString(),
@@ -120,67 +121,64 @@ export class GoogleCalendarService implements CalendarService {
         }
       });
 
-      console.log(`📊 API Response received for ${email}`);
-      
-      // Check if the calendar was found and accessible
+      const busySlots: BusySlot[] = [];
       const calendarData = response.data.calendars?.[email];
-      if (!calendarData) {
-        return {
-          email,
-          status: 'not_found',
-          errorMessage: `Calendar not found or not accessible: ${email}`
-        };
+      
+      if (calendarData?.busy) {
+        for (const busyPeriod of calendarData.busy) {
+          if (busyPeriod.start && busyPeriod.end) {
+            busySlots.push({
+              start: new Date(busyPeriod.start),
+              end: new Date(busyPeriod.end)
+            });
+          }
+        }
       }
-
-      // Check for errors in the response
-      if (calendarData.errors && calendarData.errors.length > 0) {
-        const error = calendarData.errors[0];
-        return {
-          email,
-          status: 'access_denied',
-          errorMessage: `Calendar access error: ${error.reason || 'Unknown error'}`
-        };
-      }
-
-      // Parse busy slots
-      const busySlots: BusySlot[] = calendarData.busy?.map((slot: any) => ({
-        start: new Date(slot.start || ''),
-        end: new Date(slot.end || ''),
-        status: 'busy' as const
-      })) || [];
-
-      console.log(`✅ Found ${busySlots.length} busy slots for ${email}`);
 
       return {
         email,
-        status: 'success',
-        busySlots
+        busy: busySlots
       };
 
-    } catch (error: any) {
-      console.log(`❌ Google Calendar API error for ${email}:`, error.message);
-      
-      if (error.code === 403) {
-        return {
-          email,
-          status: 'access_denied',
-          errorMessage: 'Calendar access denied - insufficient permissions'
-        };
-      }
-      
-      if (error.code === 404) {
-        return {
-          email,
-          status: 'not_found',
-          errorMessage: 'Calendar not found'
-        };
-      }
-      
-      return {
-        email,
-        status: 'error',
-        errorMessage: `API error: ${error.message}`
-      };
+    } catch (error) {
+      console.error('Error checking calendar availability:', error);
+      throw error;
     }
+  }
+
+  async findAvailableSlots(
+    emails: string[],
+    duration: number, // in minutes
+    searchStart: Date,
+    searchEnd: Date
+  ): Promise<Date[]> {
+    if (!this.useRealApi) {
+      console.log('[MOCK] Finding available slots for:', {
+        emails,
+        duration,
+        searchStart: searchStart.toISOString(),
+        searchEnd: searchEnd.toISOString()
+      });
+      
+      // Return mock available slots
+      const slots: Date[] = [];
+      const current = new Date(searchStart);
+      
+      while (current < searchEnd) {
+        // Add a slot every 2 hours as mock data
+        slots.push(new Date(current));
+        current.setHours(current.getHours() + 2);
+        
+        if (slots.length >= 5) break; // Limit mock results
+      }
+      
+      return slots;
+    }
+
+    // Real implementation would:
+    // 1. Get busy periods for all emails
+    // 2. Find gaps that fit the duration
+    // 3. Return available start times
+    throw new Error('Real findAvailableSlots not implemented yet');
   }
 }
