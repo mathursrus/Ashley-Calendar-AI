@@ -26,5 +26,6 @@ jobs:
           title: "Test Plan: ${{ github.ref_name }}"
           body: "Linked issue: #${{ steps.vars.outputs.issue }}"
           labels: "type:test-plan,needs:review"
+          base: master
           branch: "${{ github.ref_name }}"
           delete-branch: false
