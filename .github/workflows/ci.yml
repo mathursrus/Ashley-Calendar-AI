@@ -18,7 +18,7 @@ jobs:
       - run: npm run build
       - run: npm test
   e2e:
-    if: hashFiles('**/playwright.config.*') != ''
+    if: ${{ hashFiles('**/playwright.config.*') != '' }}
     needs: build-and-test
     runs-on: ubuntu-latest
     steps:
