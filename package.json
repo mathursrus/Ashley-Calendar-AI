@@ -10,6 +10,12 @@
     "test-context": "ts-node test-context.ts",
     "test-sid-multi-participant": "ts-node test-sid-multi-participant.ts",
     "test-speech-formatter": "ts-node test-speech-formatter.ts",
+    "test-calendar-data-simple": "ts-node test-calendar-data-simple.ts",
+    "setup-oauth": "ts-node setup-oauth.ts",
+    "orchestrator": "ts-node src/orchestrator/main.ts",
+    "orchestrator:once": "ts-node src/orchestrator/main.ts --once",
+    "orchestrator:dev": "ts-node src/orchestrator/main.ts --interval=1",
+    "test-oauth-consent": "ts-node test-oauth-consent.ts",
     "dev": "baml dev",
     "generate": "npx baml-cli generate",
     "lint": "eslint src/**/*.ts",
@@ -38,7 +44,8 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
-    "dotenv": "^16.6.1"
+    "dotenv": "^16.6.1",
+    "googleapis": "^155.0.1"
   },
   "jest": {
     "preset": "ts-jest",

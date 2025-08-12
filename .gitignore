@@ -6,6 +6,7 @@ yarn-error.log*
 
 baml_client/
 *.mp4
+Patent/
 
 # Environment variables
 .env
