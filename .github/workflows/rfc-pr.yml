@@ -1,0 +1,27 @@
+name: RFC PR from feature branch
+on:
+  push:
+    branches: ['feature/**']
+    paths: ['docs/rfcs/**']
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  rfc-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: 
+          fetch-depth: 0
+      - name: Derive issue number from branch
+        id: vars
+        run: echo "issue=$(echo '${GITHUB_REF_NAME#refs/heads/}' | sed -E 's#^feature/([0-9]+)-.*#\1#')" >> $GITHUB_OUTPUT
+      - name: Open/Update RFC PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "docs(rfc): add/update RFC"
+          title: "RFC: ${{ github.ref_name }}"
+          body: "Linked issue: #${{ steps.vars.outputs.issue }}"
+          labels: "type:design,needs:review"
+          branch: "${{ github.ref_name }}"
+          delete-branch: false

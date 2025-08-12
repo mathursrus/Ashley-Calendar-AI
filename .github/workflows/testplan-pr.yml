@@ -1,0 +1,27 @@
+name: Test Plan PR from feature branch
+on:
+  push:
+    branches: ['feature/**']
+    paths: ['docs/testplans/**']
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  testplan-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: 
+          fetch-depth: 0
+      - name: Derive issue number from branch
+        id: vars
+        run: echo "issue=$(echo '${GITHUB_REF_NAME#refs/heads/}' | sed -E 's#^feature/([0-9]+)-.*#\1#')" >> $GITHUB_OUTPUT
+      - name: Open/Update Test Plan PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "docs(testplan): add/update test plan"
+          title: "Test Plan: ${{ github.ref_name }}"
+          body: "Linked issue: #${{ steps.vars.outputs.issue }}"
+          labels: "type:test-plan,needs:review"
+          branch: "${{ github.ref_name }}"
+          delete-branch: false

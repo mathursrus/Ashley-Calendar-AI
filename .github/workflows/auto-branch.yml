@@ -1,0 +1,18 @@
+name: Create issue branch
+on:
+  issues:
+    types: [opened, labeled]
+permissions:
+  contents: write
+jobs:
+  create-branch:
+    if: |
+      github.event.action == 'opened' || 
+      (github.event.action == 'labeled' && github.event.label.name == 'ready:design')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create branch for issue
+        uses: robvanderleek/create-issue-branch@v1
+        with:
+          branchName: 'feature/${issue.number}-${issue.title, kebabcase}'
+          openPR: false
