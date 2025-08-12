@@ -15,7 +15,10 @@ jobs:
           fetch-depth: 0
       - name: Derive issue number from branch
         id: vars
-        run: echo "issue=$(echo '${GITHUB_REF_NAME#refs/heads/}' | sed -E 's#^feature/([0-9]+)-.*#\1#')" >> $GITHUB_OUTPUT
+        run: |
+          BRANCH_NAME="${GITHUB_REF_NAME}"
+          ISSUE_NUMBER=$(echo "$BRANCH_NAME" | sed -E 's#^feature/([0-9]+)-.*#\1#')
+          echo "issue=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
       - name: Open/Update Test Plan PR
         uses: peter-evans/create-pull-request@v6
         with:
