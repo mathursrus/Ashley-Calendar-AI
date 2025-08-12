@@ -4,41 +4,38 @@ on:
     branches: ['feature/**']
     paths: ['docs/rfcs/**']
 permissions:
-  contents: write
+  contents: read
   pull-requests: write
 jobs:
   rfc-pr:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with: 
-          fetch-depth: 0
-          ref: master
-      - name: Checkout feature branch
+      - name: Extract branch info
+        id: branch
         run: |
-          git checkout ${{ github.ref_name }}
-      - name: Derive issue number from branch
-        id: vars
-        run: |
-          BRANCH_NAME="${GITHUB_REF_NAME}"
+          BRANCH_NAME="${{ github.ref_name }}"
           ISSUE_NUMBER=$(echo "$BRANCH_NAME" | sed -E 's#^feature/([0-9]+)-.*#\1#')
-          echo "issue=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
-      - name: Open/Update RFC PR
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
+      - name: Check if PR exists and create if needed
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH_NAME: ${{ github.ref_name }}
-          ISSUE_NUMBER: ${{ steps.vars.outputs.issue }}
+          BRANCH_NAME: ${{ steps.branch.outputs.branch_name }}
+          ISSUE_NUMBER: ${{ steps.branch.outputs.issue_number }}
         run: |
           # Check if PR already exists
-          if gh pr view "$BRANCH_NAME" --json number > /dev/null 2>&1; then
+          if gh pr list --repo mathursrus/Ashley-Calendar-AI --head "$BRANCH_NAME" --json number | grep -q "number"; then
             echo "PR already exists for branch $BRANCH_NAME"
+            gh pr list --repo mathursrus/Ashley-Calendar-AI --head "$BRANCH_NAME" --json number,title,url
           else
             # Create new PR
+            echo "Creating RFC PR for branch $BRANCH_NAME"
             gh pr create \
+              --repo mathursrus/Ashley-Calendar-AI \
               --title "RFC: $BRANCH_NAME" \
               --body "Linked issue: #$ISSUE_NUMBER" \
               --base master \
               --head "$BRANCH_NAME" \
               --label "type:design,needs:review"
-            echo "Created RFC PR for branch $BRANCH_NAME"
+            echo "✅ Created RFC PR for branch $BRANCH_NAME"
           fi
