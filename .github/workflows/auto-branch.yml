@@ -7,7 +7,7 @@ permissions:
 jobs:
   create-branch:
     if: |
-      github.event.action == 'opened' || 
+      (github.event.action == 'opened' && contains(github.event.issue.labels.*.name, 'ready:design')) ||
       (github.event.action == 'labeled' && github.event.label.name == 'ready:design')
     runs-on: ubuntu-latest
     steps:
