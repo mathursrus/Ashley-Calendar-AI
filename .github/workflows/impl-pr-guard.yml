@@ -12,10 +12,6 @@ jobs:
       - uses: actions/checkout@v4
         with: 
           fetch-depth: 0
-      - name: Auth gh
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: echo "$GH_TOKEN" | gh auth login --with-token
       - name: Check for tests or approved test plan
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
