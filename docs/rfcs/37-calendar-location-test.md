@@ -16,3 +16,5 @@ Create this test RFC file and see if:
 This RFC is purely for testing automation - can be deleted after verification.
 
 **UPDATE**: Fixed the workflow configuration to specify `base: master` so PR is created correctly.
+
+**UPDATE 2**: Replaced peter-evans action with GitHub CLI for more reliable PR creation.
