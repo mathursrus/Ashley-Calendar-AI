@@ -1,7 +1,7 @@
 name: CI
 on:
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 permissions:
   contents: read
   checks: write
@@ -13,13 +13,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: corepack enable
       - run: npm install
       - run: npm run lint
-      - run: npm run typecheck
+      - run: npm run build
       - run: npm test
   e2e:
-    if: ${{ hashFiles('**/playwright.config.*') != '' }}
+    if: hashFiles('**/playwright.config.*') != ''
     needs: build-and-test
     runs-on: ubuntu-latest
     steps:
@@ -27,7 +26,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: corepack enable
       - run: npm install
       - run: npx playwright install --with-deps
       - run: npm run test:e2e

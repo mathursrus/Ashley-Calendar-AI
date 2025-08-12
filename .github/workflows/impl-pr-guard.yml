@@ -1,7 +1,7 @@
 name: Implementation PR Guard
 on:
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 permissions:
   pull-requests: read
   contents: read
