@@ -19,7 +19,8 @@ jobs:
           fi
       - name: Create branch for issue
         if: steps.check_label.outputs.has_label == 'true'
-        uses: robvanderleek/create-issue-branch@v1
+        uses: robvanderleek/create-issue-branch@main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           branchName: 'feature/${issue.number}-${issue.title, kebabcase}'
-          openPR: false
