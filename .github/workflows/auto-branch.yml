@@ -11,12 +11,20 @@ jobs:
       - name: Check for ready:design label
         id: check_label
         run: |
-          echo "Issue labels: ${{ toJson(github.event.issue.labels) }}"
-          if echo '${{ toJson(github.event.issue.labels) }}' | grep -q '"name":"ready:design"'; then
+          echo "Issue labels JSON: ${{ toJson(github.event.issue.labels) }}"
+          
+          # Check if ready:design label exists
+          labels='${{ toJson(github.event.issue.labels) }}'
+          if echo "$labels" | jq -r '.[].name' | grep -q "ready:design"; then
+            echo "Label found: ready:design"
             echo "has_label=true" >> $GITHUB_OUTPUT
           else
+            echo "Label NOT found: ready:design"
             echo "has_label=false" >> $GITHUB_OUTPUT
           fi
+          
+          echo "Final output: $(cat $GITHUB_OUTPUT)"
+          
       - name: Create branch for issue
         if: steps.check_label.outputs.has_label == 'true'
         uses: robvanderleek/create-issue-branch@main
