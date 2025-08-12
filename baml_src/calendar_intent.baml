@@ -43,15 +43,10 @@ class CalendarIntent {
   estimated_duration_minutes int?
   recurring_pattern string?
   
-  // Timezone awareness fields
+  // Minimal timezone awareness fields
   requestor_timezone string?
   timezone_confidence float?
-  timezone_source string?
   explicit_timezone_mentioned bool
-  
-  // Multi-participant timezone coordination
-  participant_timezones string[]
-  timezone_aware_times string[]
 }
 
 function ExtractCalendarIntent(email_content: string, sender_email: string, email_subject: string) -> CalendarIntent {
@@ -89,54 +84,30 @@ function ExtractCalendarIntent(email_content: string, sender_email: string, emai
        - recurring_pattern: If recurring, describe the pattern (e.g., "weekly", "monthly")
 
     4. TIMEZONE AWARENESS:
-       - requestor_timezone: Detected timezone of the sender (IANA format like "America/New_York")
-       - timezone_confidence: Confidence level 0.0-1.0 for timezone detection
-       - timezone_source: How timezone was detected ("header", "signature", "content", "fallback")
-       - explicit_timezone_mentioned: true if sender explicitly mentioned a timezone
-       - participant_timezones: List of detected timezones for all participants
-       - timezone_aware_times: Times converted to all relevant timezones
+       - requestor_timezone: If you can detect sender's timezone from content (e.g., "PST", "EST", "2 PM my time"), provide IANA format like "America/New_York". Otherwise leave null.
+       - timezone_confidence: Confidence level 0.0-1.0 for timezone detection (0.0 if no timezone detected)
+       - explicit_timezone_mentioned: true if sender explicitly mentioned a timezone like "PST", "EST", "Pacific time", etc.
 
     5. RESPONSE STYLE:
        - response_tone: PROFESSIONAL, FRIENDLY, CASUAL, or FORMAL based on sender's tone
-
-    IMPORTANT TIMEZONE RULES:
-    - Look for timezone indicators in email headers, signatures, and content
-    - Common patterns: "PST", "EST", "GMT+5", "Pacific time", "2 PM my time"
-    - If no timezone detected, use "America/Los_Angeles" (Sid's timezone) as fallback
-    - Set explicit_timezone_mentioned to true only if sender clearly states a timezone
-    - For multi-participant meetings, try to detect each participant's timezone
 
     Return the extracted information in the specified format.
   "#
 }
 
-function GenerateEmailResponse(
-  calendar_intent: CalendarIntent,
-  calendar_data: string,
-  sender_timezone: string,
-  participant_timezones: string[]
-) -> string {
+function GenerateEmailResponse(calendar_intent: CalendarIntent, calendar_data: string) -> string {
   client GPT4o
   prompt #"
     You are Ashley, Sid's AI calendar assistant. Generate a professional email response.
 
     Calendar Intent: {{ calendar_intent }}
     Sid's Calendar Data: {{ calendar_data }}
-    Sender Timezone: {{ sender_timezone }}
-    Participant Timezones: {{ participant_timezones }}
 
     Generate an email response that:
     1. Acknowledges the request with appropriate tone
-    2. Shows timezone awareness by mentioning times in relevant timezones
-    3. Provides calendar availability or confirms scheduling
-    4. Is helpful and professional
-    5. Includes timezone context when coordinating across multiple timezones
-
-    TIMEZONE RESPONSE RULES:
-    - Always show times in both sender's timezone and Sid's timezone when different
-    - For multi-participant meetings, mention key timezones involved
-    - Use clear timezone abbreviations (PST, EST, etc.) or full names
-    - Example: "The meeting is scheduled for 2:00 PM PST (5:00 PM EST)"
+    2. Provides calendar availability or confirms scheduling
+    3. Is helpful and professional
+    4. If timezone was detected, acknowledge it appropriately
 
     Keep the response concise but complete.
   "#
