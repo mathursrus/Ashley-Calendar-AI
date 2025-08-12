@@ -20,12 +20,21 @@ jobs:
           ISSUE_NUMBER=$(echo "$BRANCH_NAME" | sed -E 's#^feature/([0-9]+)-.*#\1#')
           echo "issue=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
       - name: Open/Update RFC PR
-        uses: peter-evans/create-pull-request@v6
-        with:
-          commit-message: "docs(rfc): add/update RFC"
-          title: "RFC: ${{ github.ref_name }}"
-          body: "Linked issue: #${{ steps.vars.outputs.issue }}"
-          labels: "type:design,needs:review"
-          base: master
-          branch: "${{ github.ref_name }}"
-          delete-branch: false
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH_NAME: ${{ github.ref_name }}
+          ISSUE_NUMBER: ${{ steps.vars.outputs.issue }}
+        run: |
+          # Check if PR already exists
+          if gh pr view "$BRANCH_NAME" --json number > /dev/null 2>&1; then
+            echo "PR already exists for branch $BRANCH_NAME"
+          else
+            # Create new PR
+            gh pr create \
+              --title "RFC: $BRANCH_NAME" \
+              --body "Linked issue: #$ISSUE_NUMBER" \
+              --base master \
+              --head "$BRANCH_NAME" \
+              --label "type:design,needs:review"
+            echo "Created RFC PR for branch $BRANCH_NAME"
+          fi
