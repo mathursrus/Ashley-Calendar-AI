@@ -20,5 +20,4 @@ jobs:
       - run: npm run generate
       - run: npm run lint
       - run: npm run build
-      - run: chmod +x scripts/run-tests.sh
-      - run: bash scripts/run-tests.sh
+      - run: npm run test
