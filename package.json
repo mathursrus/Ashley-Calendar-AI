@@ -19,8 +19,8 @@
     "test-oauth-consent": "ts-node test-oauth-consent.ts",
     "dev": "baml dev",
     "generate": "npx baml-cli generate",
-    "lint": "eslint src/**/*.ts",
-    "lint:fix": "eslint src/**/*.ts --fix"
+    "lint": "eslint *.ts",
+    "lint:fix": "eslint *.ts --fix"
   },
   "keywords": [
     "openai",
