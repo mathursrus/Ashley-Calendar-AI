@@ -16,6 +16,7 @@ jobs:
         with:
           node-version: '20'
       - run: npm install
+      - run: npm install -g @boundaryml/baml
       - run: npm run generate
       - run: npm run lint
       - run: npm run build
