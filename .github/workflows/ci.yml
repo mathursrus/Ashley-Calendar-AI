@@ -28,4 +28,12 @@ jobs:
       - run: npm run generate
       - run: npm run lint
       - run: npm run build
-      - run: npm run test
+      - name: Run TypeScript tests (tsx)
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILES="$(git ls-files -- '**/*.test.ts' '**/*.spec.ts' 'tests/**/*.ts' './test-*.ts' || true)"
+          if [ -z "$FILES" ]; then
+            echo "No TS tests found"; exit 0
+          fi
+          npx --yes tsx --test --test-reporter tap $FILES
