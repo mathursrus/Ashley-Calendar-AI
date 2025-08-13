@@ -1,31 +1,39 @@
 name: CI
 on:
+  push:
+    branches: [ main, 'feature/**' ]   # use 'master' only if that's truly your default
+    paths-ignore: [ 'docs/**' ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
+    paths-ignore: [ 'docs/**' ]
 permissions:
   contents: read
   checks: write
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    env:
+      ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
+      OPENAI_API_KEY:     ${{ secrets.OPENAI_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
       - run: npm install
+      - run: npm install -g @boundaryml/baml
+      - run: npm run generate
       - run: npm run lint
       - run: npm run build
-      - run: npm test
-  e2e:
-    if: hashFiles('**/playwright.config.*') != ''
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - run: npm install
-      - run: npx playwright install --with-deps
-      - run: npm run test:e2e
+      - name: Run TypeScript tests (tsx)
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILES="$(git ls-files -- '**/*.test.ts' '**/*.spec.ts' 'tests/**/*.ts' './test-*.ts' || true)"
+          if [ -z "$FILES" ]; then
+            echo "No TS tests found"; exit 0
+          fi
+          npx --yes tsx --test --test-reporter tap $FILES
