@@ -1,7 +1,8 @@
 name: Implementation PR Guard
 on:
-  pull_request:
-    branches: [ master ]
+  push:
+    branches: [ 'feature/**' ]  
+    paths-ignore: [ 'docs/**' ]
 permissions:
   pull-requests: read
   contents: read

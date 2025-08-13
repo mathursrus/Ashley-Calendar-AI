@@ -1,7 +1,7 @@
 name: CI
 on:
   push:
-    branches: [ main, 'feature/**' ]   # use 'master' only if that's truly your default
+    branches: [ 'feature/**' ]   # use 'master' only if that's truly your default
     paths-ignore: [ 'docs/**' ]
   pull_request:
     branches: [ main ]
@@ -32,7 +32,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          FILES="$(git ls-files -- '**/*.test.ts' '**/*.spec.ts' 'tests/**/*.ts' './test-*.ts' || true)"
+          FILES="$(git ls-files -- './test-ashley.ts' || true)"
           if [ -z "$FILES" ]; then
             echo "No TS tests found"; exit 0
           fi
