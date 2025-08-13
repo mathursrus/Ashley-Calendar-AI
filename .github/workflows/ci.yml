@@ -1,15 +1,23 @@
 name: CI
 on:
   push:
-    branches: [ master, 'feature/*' ]
+    branches: [ main, 'feature/**' ]   # use 'master' only if that's truly your default
+    paths-ignore: [ 'docs/**' ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
+    paths-ignore: [ 'docs/**' ]
 permissions:
   contents: read
   checks: write
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    env:
+      ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
+      OPENAI_API_KEY:     ${{ secrets.OPENAI_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
