@@ -5,7 +5,7 @@
   "main": "dist/run-test.js",
   "scripts": {
     "build": "tsc",
-    "test": "bash scripts/run-tests.sh",
+    "test": "node --loader tsx --test './test-*.ts'",
     "test-intent": "ts-node test-intent.ts",
     "test-ashley": "ts-node test-ashley.ts",
     "test-context": "ts-node test-context.ts",
