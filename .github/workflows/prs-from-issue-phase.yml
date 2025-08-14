@@ -33,7 +33,7 @@ jobs:
       - name: Ensure branch exists (from base)
         env: 
             BR: ${{ steps.vars.outputs.branch }}
-            BASE: ${{ steps.vars.outputs.base }} }
+            BASE: ${{ steps.vars.outputs.base }}
         run: |
           git fetch origin "$BASE"
           if git ls-remote --exit-code --heads origin "$BR" >/dev/null 2>&1; then
