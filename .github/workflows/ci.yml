@@ -1,39 +1,37 @@
 name: CI
+
 on:
   push:
-    branches: [ 'feature/**' ]   # use 'master' only if that's truly your default
-    paths-ignore: [ 'docs/**' ]
+    branches: [ master, feature/* ]
   pull_request:
     branches: [ master ]
-    paths-ignore: [ 'docs/**' ]
-permissions:
-  contents: read
-  checks: write
-concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+
 jobs:
-  build-and-test:
+  test:
     runs-on: ubuntu-latest
-    env:
-      ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
-      OPENAI_API_KEY:     ${{ secrets.OPENAI_API_KEY }}
+    
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - run: npm install
-      - run: npm install -g @boundaryml/baml
-      - run: npm run generate
-      - run: npm run lint
-      - run: npm run build
-      - name: Run TypeScript tests (tsx)
-        shell: bash
-        run: |
-          set -euo pipefail
-          FILES="$(git ls-files -- './test-ashley.ts' || true)"
-          if [ -z "$FILES" ]; then
-            echo "No TS tests found"; exit 0
-          fi
-          npx --yes tsx --test --test-reporter tap $FILES
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Lint
+      run: npm run lint
+    
+    - name: Build
+      run: npm run build
+    
+    - name: Run smoke tests (feature branches)
+      if: startsWith(github.ref, 'refs/heads/feature/')
+      run: npm run test:smoke
+    
+    - name: Run full tests (master branch)
+      if: github.ref == 'refs/heads/master'
+      run: npm run test:full
