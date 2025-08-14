@@ -1,0 +1,28 @@
+name: Sync Issue on PR Review
+on:
+  pull_request_review:
+    types: [submitted]
+permissions:
+  pull-requests: write
+  issues: write
+jobs:
+  back-to-wip-on-changes-requested:
+    if: github.event.review.state == 'changes_requested'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Auth
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+      - name: Derive issue number from branch
+        id: vars
+        run: |
+          BR="${{ github.event.pull_request.head.ref }}" # e.g. feature/26-slug
+          ISSUE=$(sed -E 's#^feature/([0-9]+)-.*#\1#' <<< "$BR")
+          echo "issue=$ISSUE" >> $GITHUB_OUTPUT
+      - name: Flip issue to status:wip and PR to Draft
+        env:
+          ISSUE:  ${{ steps.vars.outputs.issue }}
+          PRNUM:  ${{ github.event.pull_request.number }}
+        run: |
+          gh issue edit "$ISSUE" --add-label "status:wip"
+          gh pr edit "$PRNUM" --draft
+          gh pr edit "$PRNUM" --add-label "status:wip" --remove-label "status:needs-review" || true
