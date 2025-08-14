@@ -71,6 +71,34 @@ Update `.github/workflows/ci.yml`:
 - Feature branches: Run `npm run test:smoke`
 - Master branch: Run `npm run test:full`
 
+## Alternatives Considered
+
+### Alternative 1: Separate Smoke Test Files
+- **Approach**: Create dedicated `*.smoke.test.ts` files with duplicated test logic
+- **Rejected**: Increases maintenance overhead and code duplication
+
+### Alternative 2: Test Configuration Files
+- **Approach**: Use Jest/test runner configuration to define test suites
+- **Rejected**: Adds complexity and requires learning new configuration syntax
+
+### Alternative 3: Test Categories with Decorators
+- **Approach**: Use TypeScript decorators or test framework tags
+- **Rejected**: Requires additional dependencies and framework-specific knowledge
+
+## Risks and Mitigations
+
+### Risk 1: Insufficient Coverage
+- **Risk**: Smoke tests might miss critical regressions
+- **Mitigation**: Carefully select tests covering core user journeys; full tests still run on master
+
+### Risk 2: Maintenance Overhead
+- **Risk**: Developers might forget to mark new critical tests as smoke tests
+- **Mitigation**: Include smoke test guidelines in PR template and code review checklist
+
+### Risk 3: False Confidence
+- **Risk**: Green smoke tests might give false confidence about code quality
+- **Mitigation**: Clear documentation that smoke tests are for fast feedback, not comprehensive validation
+
 ## Implementation Plan
 
 **Immediate Implementation** (no phases):
@@ -84,3 +112,4 @@ Update `.github/workflows/ci.yml`:
 - CI feedback time reduced from current duration to <3 minutes for smoke tests
 - Smoke tests cover core functionality with 2-3 tests per major component
 - Full test suite continues to run on master branch for comprehensive validation
+- Developer satisfaction with faster feedback loop
