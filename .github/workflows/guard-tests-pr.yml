@@ -1,0 +1,28 @@
+name: Guard Tests PR (tests-only)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [ master ]
+permissions: { contents: read, pull-requests: read }
+jobs:
+  guard:
+    if: contains(github.event.pull_request.labels.*.name, 'type:tests')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Fail if non-test files changed
+        run: |
+          set -euo pipefail
+          CHANGED=$(gh pr view "${{ github.event.pull_request.number }}" --json files --jq '.files[].path')
+          BAD=""
+          while read -r f; do
+            [[ -z "$f" ]] && continue
+            if [[ ! "$f" =~ (^tests?/|^e2e/|\.test\.tsx?$|\.spec\.tsx?$) ]]; then
+              BAD+="\n - $f"
+            fi
+          done <<< "$CHANGED"
+          if [[ -n "$BAD" ]]; then
+            echo -e "Non-test files in a tests-only PR:$BAD"
+            exit 1
+          fi

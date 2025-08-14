@@ -2,4 +2,7 @@
 trigger: always_on
 ---
 
-Work remotely via GitHub MCP. Do not run git checkout or write to the local workspace. Create/commit files, push to branches, and manage PRs using GitHub MCP only. CI runs tests.
+# Remote-only, bot-authored PRs
+- Use GitHub MCP for file edits, commits, and labels. Do not touch the local FS.
+- Push to feature branches only; never push to master.
+- Do NOT open PRs via MCP; push and let Actions open/update Draft PRs (authored by bot).
