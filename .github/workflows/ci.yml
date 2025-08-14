@@ -28,14 +28,7 @@ jobs:
       - run: npm run generate
       - run: npm run lint
       - run: npm run build
-      - name: Run smoke tests (feature branches)
-        if: startsWith(github.ref, 'refs/heads/feature/')
-        shell: bash
-        run: |
-          set -euo pipefail
-          npm run test:smoke
-      - name: Run full tests (master branch)
-        if: github.ref == 'refs/heads/master'
+      - name: Run TypeScript tests (tsx)
         shell: bash
         run: |
           set -euo pipefail
