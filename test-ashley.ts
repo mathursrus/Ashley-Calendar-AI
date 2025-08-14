@@ -62,7 +62,7 @@ async function runAllAshleyTests(): Promise<void> {
   console.log(`\nOverall Result: ${allPassed ? '🎉 ALL TESTS PASSED' : '⚠️  SOME TESTS FAILED'}`);
 }
 
-// Individual test case definitions
+// @smoke - Basic meeting booking with available calendar
 const testBookTimeAvailable: AshleyTestCase = {
   name: 'BookTime - Available Calendar',
   calendarIntent: {
@@ -110,6 +110,7 @@ Wednesday, August 6, 2025:
   }
 };
 
+// @smoke - Time suggestions for busy calendar
 const testSuggestTimesBusy: AshleyTestCase = {
   name: 'SuggestTimes - Busy Calendar',
   calendarIntent: {
@@ -118,12 +119,19 @@ const testSuggestTimesBusy: AshleyTestCase = {
     participants: "sarah@company.com",
     executive_assistants: "",
     silent_observers: "",
-    timerange_start: "2025-08-04 10:00",
-    timerange_end: "2025-08-08 16:00",
-    request_details: "I'd like to schedule a 1-hour meeting to discuss the new project timeline. I'm available any time next week between 10 AM and 4 PM.",
-    baseline_date: "2025-08-01"
+    timerange_start: "2025-07-29 00:00",
+    timerange_end: "2025-07-29 23:59",
+    request_details: "I'd like to schedule a 1-hour meeting with Sid on Tuesday, July 29th to discuss the quarterly budget review.",
+    baseline_date: "2025-07-29"
   },
-  sidCalendarData: sidCalendarData.busy,
+  sidCalendarData: `
+Tuesday, July 29, 2025:
+- 9:00 AM - 10:00 AM: Team Standup
+- 11:00 AM - 12:30 PM: Product Review
+- 1:00 PM - 2:00 PM: Lunch Meeting
+- 2:30 PM - 4:00 PM: Strategy Session
+- 4:30 PM - 5:30 PM: Client Call
+  `,
   expectedResponse: {
     action: AshleyAction.SuggestTimes,
     send_calendar_invite: false
@@ -134,12 +142,12 @@ const testAskForClarification: AshleyTestCase = {
   name: 'AskForClarification - Vague Request',
   calendarIntent: {
     action_needed: true,
-    requestor: "mike@startup.com",
-    participants: "mike@startup.com",
+    requestor: "sarah@company.com",
+    participants: "sarah@company.com",
     executive_assistants: "",
     silent_observers: "",
     timerange_start: "2025-07-29 00:00",
-    timerange_end: "2025-08-05 23:59",
+    timerange_end: "2025-07-29 23:59",
     request_details: "I'd like to catch up.",
     baseline_date: "2025-07-29"
   },
@@ -150,6 +158,7 @@ const testAskForClarification: AshleyTestCase = {
   }
 };
 
+// @smoke - Availability check functionality
 const testAvailabilityCheck: AshleyTestCase = {
   name: 'DoesTimeWork - Availability Check',
   calendarIntent: {
@@ -158,32 +167,9 @@ const testAvailabilityCheck: AshleyTestCase = {
     participants: "alice@company.com",
     executive_assistants: "",
     silent_observers: "",
-    timerange_start: "2025-07-30 14:00",
-    timerange_end: "2025-07-30 14:45",
-    request_details: "If Sid is available on July 30th at 2pm for a 45-minute call, please schedule it.",
-    baseline_date: "2025-07-20"
-  },
-  sidCalendarData: sidCalendarData.available,
-  expectedResponse: {
-    action: AshleyAction.BookTime,
-    send_calendar_invite: true,
-    meeting_duration_minutes: 45,
-    participants_to_invite: 'alice@company.com'
-  }
-};
-
-// New test cases based on successful intent extraction results
-const testMeetingWithSpecificConstraints: AshleyTestCase = {
-  name: 'MeetingWithSpecificConstraints - Strategy Session',
-  calendarIntent: {
-    action_needed: true,
-    requestor: "Mike",
-    participants: "mike.chen@company.com",
-    executive_assistants: "",
-    silent_observers: "",
-    timerange_start: "2025-08-05 10:00",
-    timerange_end: "2025-08-06 14:00",
-    request_details: "Looking for a 2-hour time slot. Meeting can only be scheduled on Tuesday Aug 5 or Wednesday Aug 6, between 10am-2pm PT.",
+    timerange_start: "2025-08-05 14:00",
+    timerange_end: "2025-08-05 15:00",
+    request_details: "Does Tuesday, August 5th at 2pm work for a 1-hour meeting?",
     baseline_date: "2025-08-01"
   },
   sidCalendarData: `
@@ -196,6 +182,31 @@ Wednesday, August 6, 2025:
 - 10:00 AM - 11:00 AM: Client Meeting
 - 1:00 PM - 2:00 PM: Design Review
 - 3:00 PM - 4:00 PM: Marketing Sync
+  `,
+  expectedResponse: {
+    action: AshleyAction.SuggestTimes,
+    send_calendar_invite: false
+  }
+};
+
+const testMeetingWithSpecificConstraints: AshleyTestCase = {
+  name: 'MeetingWithSpecificConstraints - Product Team',
+  calendarIntent: {
+    action_needed: true,
+    requestor: "Mike",
+    participants: "mike.chen@company.com",
+    executive_assistants: "",
+    silent_observers: "",
+    timerange_start: "2025-07-29 00:00",
+    timerange_end: "2025-07-29 23:59",
+    request_details: "Need to schedule a 90-minute product strategy session for Tuesday, July 29th. Prefer afternoon but flexible.",
+    baseline_date: "2025-07-29"
+  },
+  sidCalendarData: `
+Tuesday, July 29, 2025:
+- 9:00 AM - 10:00 AM: Team Standup
+- 2:00 PM - 3:30 PM: Product Review
+- 4:00 PM - 5:00 PM: Strategy Session
   `,
   expectedResponse: {
     action: AshleyAction.SuggestTimes,
@@ -257,7 +268,6 @@ Thursday, July 31, 2025:
   }
 };
 
-// New test cases for EA booking requests
 const testEABookingRequestAvailable: AshleyTestCase = {
   name: 'EA Booking Request - Sid Available',
   calendarIntent: {
@@ -324,4 +334,4 @@ const ashleyTestCases: AshleyTestCase[] = [
 ];
 
 // Run the tests
-runAllAshleyTests(); 
+runAllAshleyTests();
