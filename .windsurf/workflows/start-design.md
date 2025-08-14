@@ -6,9 +6,9 @@ Step 1: Ask for {issue_number} (and optional {slug}); confirm target branch feat
 
 Step 2: Using GitHub MCP, ensure the branch exists (your GitHub Action will usually auto-create it) and checkout it.
 
-Step 3: Label the issue 'phase:design' and 'status:wip'
+Step 3: Label the issue 'phase:design' and 'status:wip' (remove `status:needs-review` if present)
 
-Step 4: Push RFC stub if missing and let Actions open/refresh a **Draft Design PR**. Return links to the branch and PR. 
+Step 4: Push RFC stub if missing  at docs/rfcs/<#>-<slug>.md; commit & push if missing. Let Actions open/refresh a **Draft Design PR** (bot authored). Return links to the branch and PR. 
 
 Step 5: Continue the rest of the work headless
 
