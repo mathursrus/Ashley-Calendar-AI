@@ -27,7 +27,6 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.0",
-    "@baml/client": "^0.66.0",
     "openai": "^4.0.0"
   }
 }
