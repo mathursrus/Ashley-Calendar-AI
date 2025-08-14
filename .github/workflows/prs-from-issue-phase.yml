@@ -8,6 +8,10 @@ permissions:
   pull-requests: write
   issues: write
 
+concurrency:
+  group: prs-from-issue-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
 jobs:
   route:
     if: startsWith(github.event.label.name, 'phase:') || github.event.label.name == 'status:wip' || github.event.label.name == 'status:needs-review'
@@ -35,13 +39,16 @@ jobs:
             BR: ${{ steps.vars.outputs.branch }}
             BASE: ${{ steps.vars.outputs.base }}
         run: |
-          git fetch origin "$BASE"
-          if git ls-remote --exit-code --heads origin "$BR" >/dev/null 2>&1; then
-            git switch -C "$BR" --track "origin/$BR"
+          set -euo pipefail
+          git fetch origin
+          # If the branch exists locally, just switch to it; otherwise create it off origin/$BASE
+          if git show-ref --verify --quiet "refs/heads/$BR"; then
+            git switch "$BR"
           else
-            git switch -C "$BR" "origin/$BASE"
-            git push -u origin "$BR"
+            git switch -c "$BR" "origin/$BASE"
           fi
+          # Ensure the remote branch exists and tracking is set
+          git push -u origin "$BR"
 
       - name: Auth gh
         run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
