@@ -1,19 +1,38 @@
 name: CI
+
 on:
+  push:
+    branches: [ 'feature/**' ]   # use 'master' only if that's truly your default
+    paths-ignore: [ 'docs/**' ]
   pull_request:
     branches: [ master ]
+    paths-ignore: [ 'docs/**' ]
 permissions:
   contents: read
-  checks: write
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - run: npm install
-      - run: npm run lint
-      - run: npm run build
-      - run: npm test
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    
+    - name: Install dependencies
+      run: npm install
+    
+    - name: Run lint
+      run: npm run lint
+    
+    - name: Run build
+      run: npm run build
+    
+    - name: Run tests
+      run: npm test
+      env:
+        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

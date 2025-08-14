@@ -12,20 +12,13 @@
     "resolveJsonModule": true,
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true,
-    "removeComments": false,
-    "noImplicitAny": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true
+    "sourceMap": true
   },
   "include": [
-    "**/*.ts",
-    "baml_client/**/*"
+    "*.ts"
   ],
   "exclude": [
     "node_modules",
     "dist"
   ]
-} 
+}
