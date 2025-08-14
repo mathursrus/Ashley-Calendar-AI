@@ -102,44 +102,52 @@ jobs:
           fi
           gh pr edit "$PR" --add-label "type:tests" --add-label "status:wip"
 
-      - name: Phase - Impl → ensure Draft Implementation PR (code-only)
+      - name: Phase - Implementation → ensure Draft Implementation PR
         if: startsWith(steps.vars.outputs.label, 'phase:impl')
         env:
           ISSUE:  ${{ github.event.issue.number }}
           BRANCH: ${{ steps.vars.outputs.branch }}
           BASE:   ${{ steps.vars.outputs.base }}
         run: |
+          set -euo pipefail
+          # Create an empty diverging commit if necessary so PR can open
+          if git diff --quiet "origin/${BASE}"; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git commit --allow-empty -m "chore(impl): enter implementation phase for #${ISSUE}"
+            git push
+          fi
           PR=$(gh pr list --state open --head "$BRANCH" --json number --jq '.[0].number')
           if [ -z "$PR" ]; then
             gh pr create \
               --title "Implementation: $BRANCH" \
-              --body  "Closes #$ISSUE. **Code-only**; tests already merged." \
+              --body  "Implementation for #$ISSUE. Closes #$ISSUE" \
               --base  "$BASE" \
               --head  "$BRANCH" \
               --draft
             PR=$(gh pr list --state open --head "$BRANCH" --json number --jq '.[0].number')
           fi
-          gh pr edit "$PR" --add-label "type:feature" --add-label "status:wip"
+          gh pr edit "$PR" --add-label "type:implementation" --add-label "status:wip"
 
-      # ----- STATUS SYNC -----
-      - name: If issue status:wip → set PR Draft + labels
-        if: steps.vars.outputs.label == 'status:wip'
-        env: 
-            BRANCH: ${{ steps.vars.outputs.branch }} 
+      # ----- STATUS HANDLERS -----
+      - name: Status - WIP → Draft PR
+        if: github.event.label.name == 'status:wip'
+        env:
+          BRANCH: ${{ steps.vars.outputs.branch }}
         run: |
           PR=$(gh pr list --state open --head "$BRANCH" --json number --jq '.[0].number')
           if [ -n "$PR" ]; then
-            gh pr edit "$PR" --draft
-            gh pr edit "$PR" --add-label "status:wip" --remove-label "status:needs-review" || true
+            gh pr ready "$PR" --undo
+            gh pr edit "$PR" --add-label "status:wip"
           fi
 
-      - name: If issue needs:review → set PR Ready + labels
-        if: steps.vars.outputs.label == 'status:needs-review'
-        env: 
-            BRANCH: ${{ steps.vars.outputs.branch }} 
+      - name: Status - Needs Review → Ready for Review PR
+        if: github.event.label.name == 'status:needs-review'
+        env:
+          BRANCH: ${{ steps.vars.outputs.branch }}
         run: |
           PR=$(gh pr list --state open --head "$BRANCH" --json number --jq '.[0].number')
           if [ -n "$PR" ]; then
             gh pr ready "$PR"
-            gh pr edit "$PR" --add-label "status:needs-review" --remove-label "status:wip" || true
+            gh pr edit "$PR" --add-label "status:needs-review" --remove-label "status:wip"
           fi
