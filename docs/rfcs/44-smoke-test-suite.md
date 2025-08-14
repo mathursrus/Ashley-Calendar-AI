@@ -8,162 +8,79 @@ Owner: Cascade
 **Problem**: Running all test cases for every checkin creates significant overhead, slowing down the development feedback loop and CI pipeline execution time.
 
 **Goals**:
-- Reduce CI execution time by implementing a smoke test suite with representative tests
+- Reduce CI execution time by running only representative tests on feature branches
 - Maintain confidence in code quality with strategically selected test coverage
 - Enable fast feedback for developers while preserving comprehensive testing for releases
-- Create configurable test execution modes (smoke vs full)
 
 ## Context
 
-Ashley Calendar AI currently runs comprehensive test suites on every commit, which includes:
-- Unit tests for BAML models and TypeScript services
-- Integration tests for calendar operations
-- End-to-end workflow tests
-- Multi-participant scheduling tests
-
-While comprehensive testing is valuable, the overhead impacts developer productivity and CI resource utilization. A smoke test approach would provide rapid feedback for common scenarios while full tests run on release branches or nightly builds.
+Ashley Calendar AI currently runs comprehensive test suites on every commit. While comprehensive testing is valuable, the overhead impacts developer productivity and CI resource utilization.
 
 ## Design Proposal
 
-### API Surface (OpenAPI)
-- No new API endpoints required
-- Extend existing test runner configurations
+### Simple Approach: Mark Existing Tests as Smoke Tests
 
-### Data Model / Schema
+Instead of creating new test files or complex configurations, we'll mark representative test cases in existing test files with a `@smoke` comment tag.
+
+**Example**:
 ```typescript
-interface SmokeTestConfig {
-  suites: {
-    [suiteName: string]: {
-      smokeTests: string[];        // Test file patterns for smoke testing
-      fullTests: string[];         // All test file patterns
-      representative: boolean;     // Whether this suite has representative coverage
-    }
-  };
-  modes: {
-    smoke: string[];              // Test suites to run in smoke mode
-    full: string[];               // All test suites
-  };
+// @smoke - Core intent detection
+test('should detect meeting creation intent', () => {
+  // existing test code
+});
+
+test('should handle complex scheduling scenarios', () => {
+  // this test runs only in full mode
+});
+
+// @smoke - Basic calendar operations  
+test('should create simple calendar event', () => {
+  // existing test code
+});
+```
+
+### Implementation
+
+1. **Test Selection**: Mark 2-3 representative test cases per existing test file with `@smoke` comments
+2. **Test Runner**: Add npm script `test:smoke` that runs only tests marked with `@smoke`
+3. **CI Integration**: Update CI workflow to run smoke tests on feature branches, full tests on master
+
+### Test Files to Update
+
+Based on package.json scripts, mark smoke tests in:
+- `test-intent.ts` - Core BAML intent detection
+- `test-ashley.ts` - Basic Ashley functionality  
+- `test-context.ts` - Context handling
+- `test-calendar-data-simple.ts` - Simple calendar operations
+- `test-speech-formatter.ts` - Speech response formatting
+
+### npm Scripts
+
+```json
+{
+  "scripts": {
+    "test:smoke": "grep -l '@smoke' *.ts | xargs node --loader tsx --test",
+    "test:full": "npm run test"
+  }
 }
 ```
 
-### User Flows
-1. **Developer Commit Flow**:
-   - Developer pushes to feature branch
-   - CI triggers smoke test suite (2-5 minutes)
-   - Fast feedback on core functionality
-   - Full tests run on PR merge to master
+### CI Workflow Changes
 
-2. **Release Flow**:
-   - Full test suite runs on master branch
-   - Comprehensive validation before deployment
-   - Smoke tests as pre-check before full suite
+Update `.github/workflows/ci.yml`:
+- Feature branches: Run `npm run test:smoke`
+- Master branch: Run `npm run test:full`
 
-3. **Local Development**:
-   - `npm run test:smoke` for quick validation
-   - `npm run test:full` for comprehensive testing
-   - IDE integration for individual smoke tests
+## Implementation Plan
 
-### Test Selection Strategy
-For each existing test suite, select representative tests based on:
+**Immediate Implementation** (no phases):
+1. Mark representative tests with `@smoke` comments in existing files
+2. Add `test:smoke` npm script
+3. Update CI workflow for branch-based test execution
+4. Test and validate smoke test execution
 
-1. **BAML Model Tests**: 
-   - Smoke: Core intent detection, basic calendar operations
-   - Representative: `voice_intent.test.ts` (1-2 key scenarios)
+## Success Metrics
 
-2. **Calendar Service Tests**:
-   - Smoke: Create/query basic events, availability check
-   - Representative: `calendar-service.test.ts` (core CRUD operations)
-
-3. **Integration Tests**:
-   - Smoke: End-to-end meeting creation, simple scheduling
-   - Representative: `integration.test.ts` (happy path scenarios)
-
-4. **Multi-participant Tests**:
-   - Smoke: Two-person scheduling with clear availability
-   - Representative: `multi-participant.test.ts` (basic coordination)
-
-### Implementation Structure
-```
-tests/
-├── smoke/
-│   ├── smoke.config.json          # Smoke test configuration
-│   ├── baml-core.smoke.test.ts    # Representative BAML tests
-│   ├── calendar-core.smoke.test.ts # Core calendar operations
-│   └── integration-core.smoke.test.ts # Key integration flows
-├── scripts/
-│   ├── run-smoke-tests.sh         # Smoke test runner
-│   └── run-full-tests.sh          # Full test suite runner
-└── package.json                   # Updated test scripts
-```
-
-### Failure Modes & Timeouts
-- **Smoke test failure**: Block PR merge, require investigation
-- **Timeout handling**: 5-minute max for smoke suite vs 20-minute for full
-- **Flaky test mitigation**: Retry logic for smoke tests (max 2 retries)
-- **Coverage gaps**: Monthly review of smoke test effectiveness
-
-### Telemetry & Analytics
-- Track smoke test execution time vs full test time
-- Monitor smoke test failure rates and false positives
-- Measure developer feedback loop improvement
-- Coverage analysis: smoke vs full test coverage percentage
-
-## Alternatives
-
-1. **Parallel Test Execution**: Run all tests in parallel
-   - Pros: No test selection complexity
-   - Cons: Still resource-intensive, doesn't solve feedback speed
-
-2. **Test Impact Analysis**: Only run tests affected by code changes
-   - Pros: Intelligent test selection
-   - Cons: Complex dependency analysis, potential gaps
-
-3. **Staged Testing**: Different test levels (unit → integration → e2e)
-   - Pros: Natural progression
-   - Cons: Doesn't address within-suite optimization
-
-## Risks & Mitigations
-
-**Risk**: Smoke tests miss critical regressions
-- **Mitigation**: Regular review and update of representative tests, full tests on master
-
-**Risk**: Test selection becomes outdated
-- **Mitigation**: Automated analysis of test coverage and failure patterns
-
-**Risk**: Developer overconfidence in smoke test results
-- **Mitigation**: Clear documentation on smoke vs full test scope, mandatory full tests for releases
-
-**Risk**: Maintenance overhead of dual test suites
-- **Mitigation**: Automated tooling for smoke test selection, shared test utilities
-
-## Rollout Plan
-
-### Phase 1: Foundation (Week 1)
-- Create smoke test configuration structure
-- Implement test runner scripts
-- Select initial representative tests (1-2 per suite)
-
-### Phase 2: CI Integration (Week 2)
-- Update GitHub Actions workflows for smoke/full modes
-- Configure branch-based test execution (smoke for features, full for master)
-- Add npm scripts for local development
-
-### Phase 3: Optimization (Week 3)
-- Monitor execution times and adjust test selection
-- Implement retry logic and failure handling
-- Add telemetry and reporting
-
-### Phase 4: Full Deployment (Week 4)
-- Enable smoke tests for all feature branches
-- Documentation and developer training
-- Establish review process for smoke test maintenance
-
-### Success Metrics
-- **Primary**: CI feedback time reduced from 15+ minutes to <5 minutes for smoke tests
-- **Secondary**: Maintain >90% confidence in smoke test coverage
-- **Tertiary**: Developer satisfaction with faster feedback loop
-
-### Feature Flags
-- `ENABLE_SMOKE_TESTS`: Toggle smoke test mode in CI
-- `SMOKE_TEST_RETRY_COUNT`: Configure retry attempts
-- `FULL_TEST_ON_SMOKE_FAILURE`: Run full tests if smoke tests fail
+- CI feedback time reduced from current duration to <3 minutes for smoke tests
+- Smoke tests cover core functionality with 2-3 tests per major component
+- Full test suite continues to run on master branch for comprehensive validation
