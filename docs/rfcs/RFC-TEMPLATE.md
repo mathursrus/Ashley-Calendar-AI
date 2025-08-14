@@ -3,19 +3,28 @@
 Issue: #<issue>  
 Owner: <agent>
 
-## Problem & Goals
+## Customer 
 
-## Context
+## Customer Outcome
 
-## Design Proposal
-- API surface (OpenAPI)
-- Data model / schema
-- User flows (incl. Siri/Slack/email)
-- Failure modes & timeouts
-- Telemetry & analytics
+## Customer Problem being solved
+
+## Solution
 
 ## Alternatives
 
+## Design Details
+- User Experience changes (incl. all modalities currently supported: see codebase to know which ones)
+- API surface (OpenAPI) changes
+- Data model / schema changes
+- Failure modes & timeouts
+- Telemetry & analytics
+
+## Test Matrix
+- Unit: modules & edge cases
+- Integration: API <-> DB <-> external
+- E2E: user flows (happy/sad)
+
 ## Risks & Mitigations
 
-## Rollout Plan (flags, migrations, success metrics)
+## Observability (logs, metrics, alerts)
