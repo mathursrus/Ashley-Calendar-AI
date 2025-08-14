@@ -1,7 +1,7 @@
 name: CI
 on:
   push:
-    branches: [ 'feature/**' ]   # use 'master' only if that's truly your default
+    branches: [ 'feature/**' ]  
     paths-ignore: [ 'docs/**' ]
   pull_request:
     branches: [ master ]
@@ -24,7 +24,7 @@ jobs:
         with:
           node-version: '20'
       - run: npm install
-      - run: npm install -g @boundaryml/baml
+      - run: npx --yes --package @boundaryml/baml baml-cli generate
       - run: npm run generate
       - run: npm run lint
       - run: npm run build

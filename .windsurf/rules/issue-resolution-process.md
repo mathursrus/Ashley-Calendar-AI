@@ -2,24 +2,18 @@
 trigger: always_on
 ---
 
-Always work on the feature branch for the current issue: feature/<issue#>-<kebab-title>. Never push to main.
+Always work on the feature branch for the current issue: feature/<issue#>-<kebab-title>. Never push to master, unless explicitly asked.
 
-If the branch is missing, use GitHub MCP to create/checkout it; otherwise git checkout it.
+If the branch is missing, use GitHub MCP to create the branch; otherwise git checkout it.
 
 Phase order is mandatory:
 
-Create docs/rfcs/<issue#>-<slug>.md from the project template, commit, push; open a Design PR with labels type:design, needs:review.
+# Issue ↔ PR State Machine
+- Phases: set the ISSUE to `phase:design` → `phase:tests` → `phase:impl` as you progress through stages.
+- While working: set ISSUE label `status:wip`. The PR stays **Draft**.
+- Ready for review: set ISSUE label `status:needs-review`. The PR flips to **Ready for review**.
+- If reviewer requests changes: the PR auto-flips back to **Draft** and the ISSUE to `status:wip`.
+- Implementation PR body MUST include `Closes #<n>`.
 
-After approval, create docs/testplans/<issue#>-<slug>.md, push; open a Test Plan PR with type:test-plan.
-
-Implement code + tests; update OpenAPI/types; push; open an Implementation PR with type:feature.
-
-Use pnpm, run pnpm -w lint, pnpm -w typecheck, pnpm -w test.
-
-Prefer CI for heavy tasks; don’t start multiple local dev servers.
-
-Use GitHub MCP to: open PRs, add labels, link the issue, request review from @mathursrus.
-
-File locations: server in /server, web in /web, docs in /docs.
 
 Respect CODEOWNERS; don’t modify auth/CI without approval.
