@@ -193,5 +193,7 @@ jobs:
           esac
           gh pr edit "$PR" --add-label "status:wip" --remove-label "status:needs-review" || true
 
-      - name: Normalize ISSUE status to WIP (authoritative)
-        run: gh issue edit ${{ github.event.issue.number }} --add-label "status:wip" --remove-label "status:needs-review" || true
+      - name: Normalize ISSUE and PR status to WIP (authoritative)
+        run: |
+          gh issue edit ${{ github.event.issue.number }} --add-label "status:wip" --remove-label "status:needs-review" --remove-label "status:complete" || true
+          gh pr edit "$PR" --add-label "status:wip" --remove-label "status:needs-review" --remove-label "status:complete" || true
