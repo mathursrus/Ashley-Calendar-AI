@@ -11,7 +11,7 @@ Phase order is mandatory:
 # Issue ↔ PR State Machine
 - Phases: set the ISSUE to `phase:design` → `phase:tests` → `phase:impl` as you progress through stages.
 - Status: ISSUE will be automatically set to label `status:wip` when you enter a new phase. The PR stays **Draft**. When your work is ready for review, set ISSUE label `status:needs-review`. The PR will flip to **Ready for review** and Git actions will run. In case of any failures, set ISSUE label back to 'status:wip', add a comment to the ISSUE saying you are working to fix a failure (be specific about the failure), and iterate. 
-- If reviewer requests changes: the PR auto-flips back to **Draft** and the ISSUE to `status:wip`. 
+- If reviewer requests changes: the PR auto-flips back to **Draft** and the ISSUE to `status:wip`. Make sure you address and reply to each reviewer feedback.
 - Implementation PR body MUST include `Closes #<n>`.
 
 
