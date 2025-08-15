@@ -3,7 +3,7 @@ trigger: always_on
 ---
 
 Intent
-Keep our architecture clean: use BAML (LLM) for any natural-language understanding, fuzzy matching, or semantic comparison. Use deterministic TypeScript only for side-effectful or strictly rule-based work (APIs, DB, validation, formatting, scheduling, retries).
+Keep the architecture clean: use BAML (LLM) for any natural-language understanding, fuzzy matching, or semantic comparison. Use deterministic TypeScript only for side-effectful or strictly rule-based work (APIs, DB, validation, formatting, scheduling, retries).
 
 Principles (follow in this order)
 

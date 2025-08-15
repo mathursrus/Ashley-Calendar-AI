@@ -23,6 +23,6 @@ jobs:
           ISSUE:  ${{ steps.vars.outputs.issue }}
           PRNUM:  ${{ github.event.pull_request.number }}
         run: |
-          gh issue edit "$ISSUE" --add-label "status:wip"
+          gh issue edit "$ISSUE" --add-label "status:wip" --remove-label "status:needs-review"
           gh pr edit "$PRNUM" --draft
           gh pr edit "$PRNUM" --add-label "status:wip" --remove-label "status:needs-review" || true
