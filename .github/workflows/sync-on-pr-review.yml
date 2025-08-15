@@ -19,11 +19,6 @@ jobs:
       GH_TOKEN: ${{ secrets.PR_AUTOMATION_TOKEN || secrets.GITHUB_TOKEN }}
       REPO: ${{ github.repository }}
     steps:
-      - name: Setup Git
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
       - name: Derive review state, issue number, and branch
         id: vars
         shell: bash
@@ -49,14 +44,9 @@ jobs:
           set -euo pipefail
           case "$STATE" in
             changes_requested)
-              # Flip to WIP + Draft
+              # Flip to WIP
               gh issue edit "$ISSUE" --repo "$REPO" \
                 --add-label "status:wip" --remove-label "status:needs-review" --remove-label "status:complete" || true
-              # Convert PR to draft via GitHub API (works on any runner)
-              gh api \
-                --method POST \
-                repos/$REPO/pulls/$PRNUM/draft \
-                --silent
               gh pr edit "$PRNUM" --repo "$REPO" \
                 --add-label "status:wip" --remove-label "status:needs-review" --remove-label "status:complete" || true
               ;;
