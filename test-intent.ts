@@ -67,7 +67,7 @@ async function runAllIntentTests(): Promise<void> {
   console.log(`\nOverall Result: ${allPassed ? '🎉 ALL TESTS PASSED' : '⚠️  SOME TESTS FAILED'}`);
 }
 
-// @smoke - Core booking request
+// @smoke
 const testBasicBookingRequest: IntentTestCase = {
   name: 'Basic Booking Request',
   emailContent: `
@@ -106,7 +106,7 @@ mike@startup.com
   }
 };
 
-// @smoke - EA booking request
+// @smoke
 const testEABookingRequest: IntentTestCase = {
   name: 'EA Booking Request',
   emailContent: `
@@ -198,7 +198,7 @@ david@consulting.com
   }
 };
 
-// @smoke - Date interpretation fix
+// @smoke
 const testDateInterpretationFix: IntentTestCase = {
   name: 'Date Interpretation Fix',
   emailContent: `
