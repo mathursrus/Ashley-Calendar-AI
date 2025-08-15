@@ -1,0 +1,53 @@
+---
+trigger: always_on
+---
+
+Intent
+Keep the architecture clean: use BAML (LLM) for any natural-language understanding, fuzzy matching, or semantic comparison. Use deterministic TypeScript only for side-effectful or strictly rule-based work (APIs, DB, validation, formatting, scheduling, retries).
+
+Principles (follow in this order)
+
+1) Parse (LLM/BAML) → 2) Normalize (deterministic) → 3) Validate (deterministic) → 4) Decide (LLM if subjective; code if rules) → 5) Act (deterministic side effects)
+
+LLM/BAML: entity/intent extraction, timezone/place inference, date/time range interpretation, participant role classification, preference inference, text similarity, de-dupe by meaning.
+
+Deterministic code: ISO date math, schema validation, authZ/authN, idempotency keys, OpenAPI I/O, DB writes, calendar invites, retries/timeouts, metrics/telemetry.
+
+Do / Don’t
+
+Do (LLM/BAML)
+
+Extract: timezones, locations, dates, RRULE intent, “next Tuesday 3–5pm PST”, “late afternoon”.
+
+Classify: user intent (“schedule vs reschedule”), channel preference, tone.
+
+Compare: “are these two descriptions the same meeting?”, “is A a subset of B?”
+
+Do (Deterministic TS)
+
+Convert parsed times to UTC; collision checks; fairness scoring; SLA/backoff.
+
+Enforce schemas (Zod/OpenAPI); reject malformed inputs.
+
+Send emails/invites; post Slack/Teams; write Mongo; manage feature flags.
+
+Don’t
+
+Don’t hand-roll regex/heuristics for dates/locations/intent.
+
+Don’t duplicate LLM functionality.
+
+Don’t call BAML for pure formatting (e.g., toISOString, trimming).
+
+
+Where things live
+
+BAML sources: /baml_src/**/*.baml
+
+Generated client: /baml_client/** (run baml-cli generate)
+
+Deterministic logic: /src/** 
+
+Design docs + Test plans: /docs/rfcs/*.md
+
+Random utility scripts: /scripts

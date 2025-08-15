@@ -1,0 +1,8 @@
+---
+trigger: always_on
+---
+
+# Remote-only, bot-authored PRs
+- Use GitHub MCP for file edits, commits, and labels. Do not touch the local FS.
+- Push to feature branches only; never push to master.
+- Do NOT open PRs via MCP; push and let Actions open/update Draft PRs (authored by bot).

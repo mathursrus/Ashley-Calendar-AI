@@ -1,0 +1,34 @@
+---
+trigger: always_on
+---
+
+# Quiet + Headless Execution (Global)
+
+Goal: Do short, atomic runs that create/refresh external artifacts (branches, commits, PRs, labels), then STOP. Do not narrate internal reasoning.
+
+Behavior
+- Do NOT stream thoughts, plans, or step-by-step narration. No ellipses. No “I’m going to…”.
+- Use GitHub MCP only (remote ops). Never touch local FS or run local servers.
+- Produce at most 5 bullet points:
+  1) Actions executed (imperative, past tense)
+  2) Artifacts (links to PR/branch/checks)
+  3) Status (success/failure + one-line error if any)
+  4) Next command(s) I can run (slash workflow names)
+  5) Open questions (if truly blocking)
+
+Stop Criteria
+- When the work given to you is complete.
+- When workflows tied to your PR are successful. If workflows fail, your work is not complete. Keep at it.
+
+Output Template (use verbatim)
+- Summary:
+  - …
+  - …
+- Artifacts:
+  - Branch: <url>
+  - PR: <url>
+  - Issue: <url>
+- Next:
+  - Let user know when step is complete
+- Notes:
+  - (only if needed, 1–2 bullets)
