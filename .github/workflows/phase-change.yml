@@ -130,14 +130,14 @@ jobs:
           if [ -n "$EXISTING_PR" ]; then
             echo "Updating existing PR #$EXISTING_PR"
             gh pr edit "$EXISTING_PR" --title "$PR_TITLE" --body "$PR_BODY"
-            gh pr edit "$EXISTING_PR" --add-label "type:design" --add-label "phase:design"
+            gh pr edit "$EXISTING_PR" --add-label "phase:design"
           else
             echo "Creating new Design PR"
             gh pr create --title "$PR_TITLE" --body "$PR_BODY" --base master --head "$BRANCH_NAME" --draft
             # Add labels to the new PR
             sleep 2  # Brief delay to ensure PR is created
             NEW_PR=$(gh pr list --head "$BRANCH_NAME" --json number --jq '.[0].number')
-            gh pr edit "$NEW_PR" --add-label "type:design" --add-label "phase:design"
+            gh pr edit "$NEW_PR" --add-label "phase:design"
           fi
 
       - name: Handle test phase
@@ -170,14 +170,14 @@ jobs:
           if [ -n "$EXISTING_PR" ]; then
             echo "Updating existing PR #$EXISTING_PR"
             gh pr edit "$EXISTING_PR" --title "$PR_TITLE" --body "$PR_BODY"
-            gh pr edit "$EXISTING_PR" --add-label "type:test-plan" --add-label "phase:tests"
+            gh pr edit "$EXISTING_PR" --add-label "phase:tests"
           else
             echo "Creating new Test Plan PR"
             gh pr create --title "$PR_TITLE" --body "$PR_BODY" --base master --head "$BRANCH_NAME" --draft
             # Add labels to the new PR
             sleep 2  # Brief delay to ensure PR is created
             NEW_PR=$(gh pr list --head "$BRANCH_NAME" --json number --jq '.[0].number')
-            gh pr edit "$NEW_PR" --add-label "type:test-plan" --add-label "phase:tests"
+            gh pr edit "$NEW_PR" --add-label "phase:tests"
           fi
 
       - name: Handle implementation phase
@@ -185,11 +185,11 @@ jobs:
         run: |
           set -euo pipefail
           [ -z "$PR" ] && exit 0
-          # Normalize: keep one of type:design/tests/feature based on latest phase
+          # Normalize: keep one of phase:design/tests/impl based on latest phase
           case "$PH" in
-            phase:design gh pr edit "$PR" --add-label "type:design"  --remove-label "type:tests" --remove-label "type:feature" ;;
-            phase:tests  gh pr edit "$PR" --add-label "type:tests"   --remove-label "type:design" --remove-label "type:feature" ;;
-            phase:impl   gh pr edit "$PR" --add-label "type:feature" --remove-label "type:design" --remove-label "type:tests" ;;
+            phase:design gh pr edit "$PR" --add-label "phase:design"  --remove-label "phase:tests" --remove-label "phase:impl" ;;
+            phase:tests  gh pr edit "$PR" --add-label "phase:tests"   --remove-label "phase:design" --remove-label "phase:impl" ;;
+            phase:impl   gh pr edit "$PR" --add-label "phase:impl" --remove-label "phase:design" --remove-label "phase:tests" ;;
           esac
           gh pr edit "$PR" --add-label "status:wip" --remove-label "status:needs-review" || true
 
