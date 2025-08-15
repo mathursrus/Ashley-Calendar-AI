@@ -63,5 +63,4 @@ jobs:
               gh pr edit "$PR" --draft
               gh pr edit "$PR" --add-label "status:wip" --remove-label "status:needs-review" --remove-label "status:complete" || true
               ;;
-            *) echo "No action for label: $LABEL" ;;
           esac
