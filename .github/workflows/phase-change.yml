@@ -40,20 +40,23 @@ jobs:
           echo "base=${BASE:-master}" >> $GITHUB_OUTPUT
           echo "phase=${{ github.event.label.name }}" >> $GITHUB_OUTPUT
 
-      - name: Ensure branch exists (from base)
-        shell: bash
-        env:
-          BR:   ${{ steps.vars.outputs.branch }}
-          BASE: ${{ steps.vars.outputs.base }}
+      - name: Ensure branch exists and sync
         run: |
-          set -euo pipefail
-          git fetch origin
-          if git show-ref --verify --quiet "refs/heads/$BR"; then
-            git switch "$BR"
+          BRANCH_NAME="${{ steps.vars.outputs.branch }}"
+          BASE="master"
+    
+          git fetch origin "$BASE"
+    
+          if git ls-remote --exit-code --heads origin "$BRANCH_NAME" >/dev/null 2>&1; then
+              echo "Branch $BRANCH_NAME exists, syncing..."
+              git fetch origin "$BRANCH_NAME"
+              git switch "$BRANCH_NAME"
+              git pull --rebase origin "$BRANCH_NAME"
           else
-            git switch -c "$BR" "origin/$BASE"
+              echo "Branch $BRANCH_NAME does not exist, creating from $BASE..."
+              git switch -c "$BRANCH_NAME" "origin/$BASE"
+              git push -u origin "$BRANCH_NAME"
           fi
-          git push -u origin "$BR"
 
       # Design: add EMPTY RFC placeholder to guarantee a diff
       - name: phase:design → ensure empty RFC placeholder (commit if missing)
@@ -125,9 +128,9 @@ jobs:
           [ -z "$PR" ] && exit 0
           # Normalize: keep one of type:design/tests/feature based on latest phase
           case "$PH" in
-            phase:design) gh pr edit "$PR" --add-label "type:design"  --remove-label "type:tests" --remove-label "type:feature" ;;
-            phase:tests)  gh pr edit "$PR" --add-label "type:tests"   --remove-label "type:design" --remove-label "type:feature" ;;
-            phase:impl)   gh pr edit "$PR" --add-label "type:feature" --remove-label "type:design" --remove-label "type:tests" ;;
+            phase:design gh pr edit "$PR" --add-label "type:design"  --remove-label "type:tests" --remove-label "type:feature" ;;
+            phase:tests  gh pr edit "$PR" --add-label "type:tests"   --remove-label "type:design" --remove-label "type:feature" ;;
+            phase:impl   gh pr edit "$PR" --add-label "type:feature" --remove-label "type:design" --remove-label "type:tests" ;;
           esac
           gh pr edit "$PR" --add-label "status:wip" --remove-label "status:needs-review" || true
 
