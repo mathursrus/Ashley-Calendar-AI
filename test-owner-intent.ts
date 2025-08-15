@@ -16,11 +16,11 @@ test('should detect meeting creation intent', async () => {
     John
   `;
 
-  const result = await b.ExtractCalendarIntent(email);
+  const result = await b.ExtractOwnerCalendarIntent(email, '2025-01-15 10:00');
   
-  assert.strictEqual(result.intent, 'create_meeting');
-  assert.strictEqual(result.participants.length, 1);
-  assert.strictEqual(result.participants[0], 'engineering team');
+  assert.strictEqual(result.intent_type, 'MEETING_CREATE');
+  assert.ok(result.participants && result.participants.length > 0);
+  assert.ok(result.participants.includes('engineering team'));
 });
 
 test('should detect meeting cancellation intent', async () => {
@@ -35,9 +35,9 @@ test('should detect meeting cancellation intent', async () => {
     Sarah
   `;
 
-  const result = await b.ExtractCalendarIntent(email);
+  const result = await b.ExtractOwnerCalendarIntent(email, '2025-01-15 10:00');
   
-  assert.strictEqual(result.intent, 'cancel_meeting');
+  assert.strictEqual(result.intent_type, 'MEETING_CANCEL');
 });
 
 test('should detect meeting rescheduling intent', async () => {
@@ -52,9 +52,9 @@ test('should detect meeting rescheduling intent', async () => {
     Mike
   `;
 
-  const result = await b.ExtractCalendarIntent(email);
+  const result = await b.ExtractOwnerCalendarIntent(email, '2025-01-15 10:00');
   
-  assert.strictEqual(result.intent, 'reschedule_meeting');
+  assert.strictEqual(result.intent_type, 'MEETING_UPDATE');
 });
 
 test('should extract participants correctly', async () => {
@@ -69,9 +69,9 @@ test('should extract participants correctly', async () => {
     David
   `;
 
-  const result = await b.ExtractCalendarIntent(email);
+  const result = await b.ExtractOwnerCalendarIntent(email, '2025-01-15 10:00');
   
-  assert.ok(result.participants.length >= 3);
+  assert.ok(result.participants && result.participants.length >= 3);
   assert.ok(result.participants.includes('Alice'));
   assert.ok(result.participants.includes('Bob'));
   assert.ok(result.participants.includes('Charlie'));
@@ -89,9 +89,9 @@ test('should handle emails with no calendar intent', async () => {
     Jane
   `;
 
-  const result = await b.ExtractCalendarIntent(email);
+  const result = await b.ExtractOwnerCalendarIntent(email, '2025-01-15 10:00');
   
-  assert.strictEqual(result.intent, 'no_action');
+  assert.strictEqual(result.intent_type, 'UNKNOWN');
 });
 
 // @smoke - Date and time extraction
@@ -107,11 +107,11 @@ test('should extract date and time information', async () => {
     Alex
   `;
 
-  const result = await b.ExtractCalendarIntent(email);
+  const result = await b.ExtractOwnerCalendarIntent(email, '2025-01-15 10:00');
   
-  assert.strictEqual(result.intent, 'create_meeting');
-  assert.ok(result.datetime);
-  assert.ok(result.datetime.includes('2:30'));
+  assert.strictEqual(result.intent_type, 'MEETING_CREATE');
+  assert.ok(result.preferred_datetime);
+  assert.ok(result.preferred_datetime.includes('2:30') || result.preferred_datetime.includes('14:30'));
 });
 
 test('should handle relative dates', async () => {
@@ -126,11 +126,11 @@ test('should handle relative dates', async () => {
     Lisa
   `;
 
-  const result = await b.ExtractCalendarIntent(email);
+  const result = await b.ExtractOwnerCalendarIntent(email, '2025-01-15 10:00');
   
-  assert.strictEqual(result.intent, 'create_meeting');
-  assert.ok(result.datetime);
-  assert.ok(result.datetime.toLowerCase().includes('monday') || result.datetime.includes('9'));
+  assert.strictEqual(result.intent_type, 'MEETING_CREATE');
+  assert.ok(result.preferred_datetime);
+  assert.ok(result.preferred_datetime.includes('09:00') || result.preferred_datetime.includes('9:00'));
 });
 
 test('should extract location information', async () => {
@@ -145,9 +145,9 @@ test('should extract location information', async () => {
     Mark
   `;
 
-  const result = await b.ExtractCalendarIntent(email);
+  const result = await b.ExtractOwnerCalendarIntent(email, '2025-01-15 10:00');
   
-  assert.strictEqual(result.intent, 'create_meeting');
+  assert.strictEqual(result.intent_type, 'MEETING_CREATE');
   assert.ok(result.location);
   assert.ok(result.location.toLowerCase().includes('conference room a'));
 });
@@ -164,11 +164,11 @@ test('should handle virtual meeting requests', async () => {
     Emma
   `;
 
-  const result = await b.ExtractCalendarIntent(email);
+  const result = await b.ExtractOwnerCalendarIntent(email, '2025-01-15 10:00');
   
-  assert.strictEqual(result.intent, 'create_meeting');
+  assert.strictEqual(result.intent_type, 'MEETING_CREATE');
   assert.ok(result.location);
-  assert.ok(result.location.toLowerCase().includes('zoom') || result.location.toLowerCase().includes('virtual'));
+  assert.ok(result.location.toLowerCase().includes('zoom'));
 });
 
 // @smoke - Complex scenarios
@@ -184,8 +184,8 @@ test('should handle meeting updates', async () => {
     Ryan
   `;
 
-  const result = await b.ExtractCalendarIntent(email);
+  const result = await b.ExtractOwnerCalendarIntent(email, '2025-01-15 10:00');
   
-  assert.ok(['update_meeting', 'create_meeting'].includes(result.intent));
-  assert.ok(result.participants.includes('design team'));
+  assert.ok(['MEETING_UPDATE', 'MEETING_CREATE'].includes(result.intent_type));
+  assert.ok(result.participants && result.participants.includes('design team'));
 });
