@@ -61,7 +61,8 @@ async function runAllAshleyTests(): Promise<void> {
   console.log(`\nOverall Result: ${allPassed ? '🎉 ALL TESTS PASSED' : '⚠️  SOME TESTS FAILED'}`);
 }
 
-// @smoke - Core booking functionality
+// Individual test case definitions
+// @smoke
 const testBookTimeAvailable: AshleyTestCase = {
   name: 'BookTime - Available Calendar',
   calendarIntent: {
@@ -84,7 +85,7 @@ const testBookTimeAvailable: AshleyTestCase = {
   }
 };
 
-// @smoke - Conflict handling
+// @smoke
 const testBookTimeWithConflict: AshleyTestCase = {
   name: 'BookTime - With Conflict',
   calendarIntent: {
@@ -98,34 +99,46 @@ const testBookTimeWithConflict: AshleyTestCase = {
     request_details: "I'd like to schedule a 1-hour meeting with Sid on Wednesday at 3pm to discuss our partnership.",
     baseline_date: "2025-08-06"
   },
-  sidCalendarData: sidCalendarData.conflict,
+  sidCalendarData: `
+Wednesday, August 6, 2025:
+- 9:00 AM - 10:00 AM: Team Standup
+- 2:30 PM - 4:00 PM: Product Review Meeting
+- 4:30 PM - 5:30 PM: Strategy Session
+  `,
   expectedResponse: {
-    action: AshleyAction.ProposeAlternatives,
+    action: AshleyAction.SuggestTimes,
     send_calendar_invite: false
   }
 };
 
-const testBookTimeNoAction: AshleyTestCase = {
-  name: 'BookTime - No Action Needed',
+const testSuggestTimesBusy: AshleyTestCase = {
+  name: 'SuggestTimes - Busy Calendar',
   calendarIntent: {
-    action_needed: false,
-    requestor: "info@company.com",
-    participants: "",
+    action_needed: true,
+    requestor: "sarah@company.com",
+    participants: "sarah@company.com",
     executive_assistants: "",
     silent_observers: "",
-    timerange_start: "",
-    timerange_end: "",
-    request_details: "Thanks for the meeting yesterday. Looking forward to our next steps.",
-    baseline_date: "2025-08-06"
+    timerange_start: "2025-08-05 09:00",
+    timerange_end: "2025-08-05 17:00",
+    request_details: "I need to schedule a 2-hour meeting with Sid sometime on Monday between 9am and 5pm.",
+    baseline_date: "2025-08-05"
   },
-  sidCalendarData: sidCalendarData.available,
+  sidCalendarData: `
+Monday, August 5, 2025:
+- 9:00 AM - 11:00 AM: Client Call
+- 11:30 AM - 12:30 PM: Team Meeting
+- 1:00 PM - 3:00 PM: Project Review
+- 3:30 PM - 4:30 PM: One-on-One
+- 4:45 PM - 5:30 PM: Wrap-up Tasks
+  `,
   expectedResponse: {
-    action: AshleyAction.NoAction,
+    action: AshleyAction.SuggestTimes,
     send_calendar_invite: false
   }
 };
 
-// @smoke - External client meeting
+// @smoke
 const testExternalClientMeeting: AshleyTestCase = {
   name: 'External Client Meeting',
   calendarIntent: {
@@ -173,7 +186,7 @@ const testMultiParticipantMeeting: AshleyTestCase = {
 const ashleyTestCases: AshleyTestCase[] = [
   testBookTimeAvailable,
   testBookTimeWithConflict,
-  testBookTimeNoAction,
+  testSuggestTimesBusy,
   testExternalClientMeeting,
   testMultiParticipantMeeting
 ];
