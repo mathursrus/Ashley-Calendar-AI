@@ -53,7 +53,6 @@ jobs:
           PR:    ${{ steps.pr.outputs.pr }}
           LABEL: ${{ steps.pr.outputs.label }}
           REPO:  ${{ github.repository }}
-          PRNUM: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
           case "$LABEL" in
@@ -65,7 +64,7 @@ jobs:
               # Convert PR to draft via GitHub API (works on any runner)
               gh api \
                 --method POST \
-                repos/$REPO/pulls/$PRNUM/draft \
+                repos/$REPO/pulls/$PR/draft \
                 --silent
               gh pr edit "$PR" --add-label "status:wip" --remove-label "status:needs-review" --remove-label "status:complete" || true
               ;;
