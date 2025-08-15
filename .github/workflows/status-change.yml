@@ -29,12 +29,6 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Upgrade GitHub CLI
-        run: |
-          sudo apt update
-          sudo apt install -y gh
-          gh --version
-
       - name: Auth GitHub CLI
         run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
@@ -66,7 +60,11 @@ jobs:
               gh pr edit  "$PR" --add-label "status:needs-review" --remove-label "status:wip" --remove-label "status:complete" || true
               ;;
             status:wip)
-              gh pr edit "$PR" --draft
+              # Convert PR to draft via GitHub API (works on any runner)
+              gh api \
+                --method POST \
+                repos/$REPO/pulls/$PRNUM/draft \
+                --silent
               gh pr edit "$PR" --add-label "status:wip" --remove-label "status:needs-review" --remove-label "status:complete" || true
               ;;
             *)
