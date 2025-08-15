@@ -4,6 +4,7 @@
   "description": "An intelligent calendar assistant",
   "main": "index.js",
   "scripts": {
+    "build": "npm run typecheck",
     "test": "node --import tsx --test test-*.ts",
     "test:smoke": "grep -l '@smoke' test-*.ts | xargs node --import tsx --test",
     "typecheck": "tsc --noEmit",
