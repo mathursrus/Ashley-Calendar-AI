@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { b } from '../baml_client';
+import { b } from './baml_client';
 import 'dotenv/config';
 
 // @smoke - Core intent detection
