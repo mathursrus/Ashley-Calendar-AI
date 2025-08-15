@@ -60,9 +60,8 @@ jobs:
           echo "Current phase: $CURRENT_PHASE"
 
       - name: Ensure branch exists and sync
-      - name: Ensure branch exists and sync
         run: |
-          BRANCH_NAME="${{ steps.vars.outputs.branch }}"
+          BRANCH_NAME="${{ steps.issue-details.outputs.branch_name }}"
           BASE="master"
     
           git fetch origin "$BASE"
