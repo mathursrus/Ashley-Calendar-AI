@@ -130,14 +130,14 @@ jobs:
           if [ -n "$EXISTING_PR" ]; then
             echo "Updating existing PR #$EXISTING_PR"
             gh pr edit "$EXISTING_PR" --title "$PR_TITLE" --body "$PR_BODY"
-            gh pr edit "$EXISTING_PR" --add-label "phase:design"
+            gh pr edit "$EXISTING_PR" --add-label "phase:design" --remove-label "phase:tests" --remove-label "phase:impl" 
           else
             echo "Creating new Design PR"
             gh pr create --title "$PR_TITLE" --body "$PR_BODY" --base master --head "$BRANCH_NAME" --draft
             # Add labels to the new PR
             sleep 2  # Brief delay to ensure PR is created
             NEW_PR=$(gh pr list --head "$BRANCH_NAME" --json number --jq '.[0].number')
-            gh pr edit "$NEW_PR" --add-label "phase:design"
+            gh pr edit "$NEW_PR" --add-label "phase:design" --remove-label "phase:tests" --remove-label "phase:impl" 
           fi
 
       - name: Handle test phase
@@ -147,20 +147,20 @@ jobs:
           ISSUE_TITLE="${{ steps.issue-details.outputs.issue_title }}"
           BRANCH_NAME="${{ steps.issue-details.outputs.branch_name }}"
           
-          # Create or update Test Plan PR
-          PR_TITLE="[Tests] Test Plan for Issue #$ISSUE_NUMBER: $ISSUE_TITLE"
-          PR_BODY="## Test Plan for Issue #$ISSUE_NUMBER
+          # Create or update Test Implementation PR
+          PR_TITLE="[Testing] Test Cases for Issue #$ISSUE_NUMBER: $ISSUE_TITLE"
+          PR_BODY="## Test cases for Issue #$ISSUE_NUMBER
 
-          This PR contains the test plan and test cases for: $ISSUE_TITLE
+          This PR contains the test cases for: $ISSUE_TITLE
 
           **Phase:** Tests
           **Issue:** #$ISSUE_NUMBER
           **Branch:** \`$BRANCH_NAME\`
 
-          ### Test Plan Document
-          - 📋 [Test Plan Document]($TEST_PLAN_FILE)
+          ### Test Cases
+    
 
-          **Note:** This is a Test Plan PR. Implementation will follow after test plan approval.
+          **Note:** This is a Test PR. Implementation will follow after test approval.
 
           "
 
@@ -170,28 +170,55 @@ jobs:
           if [ -n "$EXISTING_PR" ]; then
             echo "Updating existing PR #$EXISTING_PR"
             gh pr edit "$EXISTING_PR" --title "$PR_TITLE" --body "$PR_BODY"
-            gh pr edit "$EXISTING_PR" --add-label "phase:tests"
+            gh pr edit "$EXISTING_PR" --add-label "phase:tests" --remove-label "phase:design" --remove-label "phase:impl"
           else
             echo "Creating new Test Plan PR"
             gh pr create --title "$PR_TITLE" --body "$PR_BODY" --base master --head "$BRANCH_NAME" --draft
             # Add labels to the new PR
             sleep 2  # Brief delay to ensure PR is created
             NEW_PR=$(gh pr list --head "$BRANCH_NAME" --json number --jq '.[0].number')
-            gh pr edit "$NEW_PR" --add-label "phase:tests"
+            gh pr edit "$NEW_PR" --add-label "phase:tests" --remove-label "phase:design" --remove-label "phase:impl"
           fi
 
       - name: Handle implementation phase
         if: steps.current-phase.outputs.current_phase == 'phase:impl'
         run: |
-          set -euo pipefail
-          [ -z "$PR" ] && exit 0
-          # Normalize: keep one of phase:design/tests/impl based on latest phase
-          case "$PH" in
-            phase:design gh pr edit "$PR" --add-label "phase:design"  --remove-label "phase:tests" --remove-label "phase:impl" ;;
-            phase:tests  gh pr edit "$PR" --add-label "phase:tests"   --remove-label "phase:design" --remove-label "phase:impl" ;;
-            phase:impl   gh pr edit "$PR" --add-label "phase:impl" --remove-label "phase:design" --remove-label "phase:tests" ;;
-          esac
-          gh pr edit "$PR" --add-label "status:wip" --remove-label "status:needs-review" || true
+          ISSUE_NUMBER="${{ steps.issue-details.outputs.issue_number }}"
+          ISSUE_TITLE="${{ steps.issue-details.outputs.issue_title }}"
+          BRANCH_NAME="${{ steps.issue-details.outputs.branch_name }}"
+          
+          # Create or update Implementation PR
+          PR_TITLE="[Implementation] Fixes for Issue #$ISSUE_NUMBER: $ISSUE_TITLE"
+          PR_BODY="## Fixes for Issue #$ISSUE_NUMBER
+
+          This PR contains the fixes for: $ISSUE_TITLE
+
+          **Phase:** Implementation
+          **Issue:** #$ISSUE_NUMBER
+          **Branch:** \`$BRANCH_NAME\`
+
+          ### Fixes
+          
+
+          Closes #$ISSUE_NUMBER
+
+          "
+
+          # Check if PR already exists
+          EXISTING_PR=$(gh pr list --head "$BRANCH_NAME" --json number --jq '.[0].number' 2>/dev/null || echo "")
+          
+          if [ -n "$EXISTING_PR" ]; then
+            echo "Updating existing PR #$EXISTING_PR"
+            gh pr edit "$EXISTING_PR" --title "$PR_TITLE" --body "$PR_BODY"
+            gh pr edit "$EXISTING_PR" --add-label "phase:impl" --remove-label "phase:design" --remove-label "phase:tests"
+          else
+            echo "Creating new Implementation PR"
+            gh pr create --title "$PR_TITLE" --body "$PR_BODY" --base master --head "$BRANCH_NAME" --draft
+            # Add labels to the new PR
+            sleep 2  # Brief delay to ensure PR is created
+            NEW_PR=$(gh pr list --head "$BRANCH_NAME" --json number --jq '.[0].number')
+            gh pr edit "$NEW_PR" --add-label "phase:impl" --remove-label "phase:design" --remove-label "phase:tests"
+          fi
 
       - name: Normalize ISSUE and PR status to WIP (authoritative)
         run: |
