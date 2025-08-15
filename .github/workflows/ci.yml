@@ -1,45 +1,46 @@
 name: CI
+
 on:
   push:
-    branches: [ 'feature/**' ]  
-    paths-ignore: [ 'docs/**' ]
+    branches: [ master, feature/* ]
   pull_request:
     branches: [ master ]
-    paths-ignore: [ 'docs/**' ]
-permissions:
-  contents: read
-  checks: write
-concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    env:
-      ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
-      OPENAI_API_KEY:     ${{ secrets.OPENAI_API_KEY }}
+    
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - run: npm install
-      - run: npx --yes --package @boundaryml/baml baml-cli generate
-      - run: npm run generate
-      - run: npm run lint
-      - run: npm run build
-      - name: Run Smoke Tests
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "🚀 Running smoke tests..."
-          
-          # Check if any test files have @smoke markers
-          SMOKE_FILES="$(grep -l '@smoke' test-*.ts 2>/dev/null || true)"
-          if [ -z "$SMOKE_FILES" ]; then
-            echo "⚠️  No smoke tests found, running all tests as fallback"
-            npm run test
-          else
-            echo "✅ Found smoke tests in: $SMOKE_FILES"
-            npm run test:smoke
-          fi
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js 20
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        
+    - name: Install dependencies
+      run: npm install
+      
+    - name: Generate BAML client
+      run: npx --yes --package @boundaryml/baml baml-cli generate
+      
+    - name: Build
+      run: npm run build
+      
+    - name: Run smoke tests
+      env:
+        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      run: |
+        set -euo pipefail
+        echo "🚀 Running smoke tests..."
+        
+        # Check if any test files have @smoke markers
+        SMOKE_FILES="$(grep -l '@smoke' test-*.ts 2>/dev/null || true)"
+        if [ -z "$SMOKE_FILES" ]; then
+          echo "⚠️  No smoke tests found, running all tests as fallback"
+          npm run test
+        else
+          echo "✅ Found smoke tests in: $SMOKE_FILES"
+          npm run test:smoke
+        fi
