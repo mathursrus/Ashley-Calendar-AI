@@ -6,9 +6,12 @@ import 'dotenv/config';
 // @smoke - Core intent detection
 test('should detect meeting creation intent', async () => {
   const email = `
+    From: john@company.com
+    To: sid.mathur@gmail.com
     Subject: Meeting Request
+    Date: 2025-01-15
     
-    Hi team,
+    Hi Sid,
     
     I'd like to schedule a meeting with the engineering team for next Tuesday at 2 PM to discuss the new project requirements.
     
@@ -16,35 +19,65 @@ test('should detect meeting creation intent', async () => {
     John
   `;
 
-  const result = await b.ExtractOwnerCalendarIntent(email, '2025-01-15 10:00');
+  const result = await b.ExtractCalendarIntent(email);
   
-  assert.strictEqual(result.intent_type, 'MEETING_CREATE');
-  assert.ok(result.participants && result.participants.length > 0);
+  assert.strictEqual(result.action_needed, true);
+  assert.strictEqual(result.requestor, 'john@company.com');
   assert.ok(result.participants.includes('engineering team'));
 });
 
-test('should detect meeting cancellation intent', async () => {
+test('should detect no action needed for informational emails', async () => {
   const email = `
-    Subject: Cancel Tomorrow's Meeting
+    From: sarah@company.com
+    To: sid.mathur@gmail.com
+    Subject: Project Update
+    Date: 2025-01-15
     
-    Hi everyone,
+    Hi Sid,
     
-    I need to cancel our meeting scheduled for tomorrow at 3 PM due to a conflict.
+    Just wanted to give you an update on the project status. Everything is going well.
     
-    Thanks,
+    Best,
     Sarah
   `;
 
-  const result = await b.ExtractOwnerCalendarIntent(email, '2025-01-15 10:00');
+  const result = await b.ExtractCalendarIntent(email);
   
-  assert.strictEqual(result.intent_type, 'MEETING_CANCEL');
+  assert.strictEqual(result.action_needed, false);
 });
 
-test('should detect meeting rescheduling intent', async () => {
+test('should extract meeting participants correctly', async () => {
   const email = `
-    Subject: Reschedule Friday Meeting
+    From: david@company.com
+    To: sid.mathur@gmail.com
+    Subject: Team Sync
+    Date: 2025-01-15
     
-    Hi team,
+    Hi Sid,
+    
+    Let's have a team sync next week with Alice, Bob, and Charlie. I'll coordinate the timing.
+    
+    Thanks,
+    David
+  `;
+
+  const result = await b.ExtractCalendarIntent(email);
+  
+  assert.strictEqual(result.action_needed, true);
+  assert.strictEqual(result.requestor, 'david@company.com');
+  assert.ok(result.participants.includes('Alice'));
+  assert.ok(result.participants.includes('Bob'));
+  assert.ok(result.participants.includes('Charlie'));
+});
+
+test('should extract requestor information', async () => {
+  const email = `
+    From: mike@company.com
+    To: sid.mathur@gmail.com
+    Subject: Reschedule Friday Meeting
+    Date: 2025-01-15
+    
+    Hi Sid,
     
     Can we move our Friday 10 AM meeting to Monday at the same time?
     
@@ -52,54 +85,21 @@ test('should detect meeting rescheduling intent', async () => {
     Mike
   `;
 
-  const result = await b.ExtractOwnerCalendarIntent(email, '2025-01-15 10:00');
+  const result = await b.ExtractCalendarIntent(email);
   
-  assert.strictEqual(result.intent_type, 'MEETING_UPDATE');
-});
-
-test('should extract participants correctly', async () => {
-  const email = `
-    Subject: Team Sync
-    
-    Hi Alice, Bob, and Charlie,
-    
-    Let's have a team sync next week. I'll send out calendar invites.
-    
-    Thanks,
-    David
-  `;
-
-  const result = await b.ExtractOwnerCalendarIntent(email, '2025-01-15 10:00');
-  
-  assert.ok(result.participants && result.participants.length >= 3);
-  assert.ok(result.participants.includes('Alice'));
-  assert.ok(result.participants.includes('Bob'));
-  assert.ok(result.participants.includes('Charlie'));
-});
-
-test('should handle emails with no calendar intent', async () => {
-  const email = `
-    Subject: Project Update
-    
-    Hi team,
-    
-    Just wanted to give you an update on the project status. Everything is going well.
-    
-    Best,
-    Jane
-  `;
-
-  const result = await b.ExtractOwnerCalendarIntent(email, '2025-01-15 10:00');
-  
-  assert.strictEqual(result.intent_type, 'UNKNOWN');
+  assert.strictEqual(result.action_needed, true);
+  assert.strictEqual(result.requestor, 'mike@company.com');
 });
 
 // @smoke - Date and time extraction
-test('should extract date and time information', async () => {
+test('should extract time range information', async () => {
   const email = `
+    From: alex@company.com
+    To: sid.mathur@gmail.com
     Subject: Meeting Tomorrow
+    Date: 2025-01-15
     
-    Hi team,
+    Hi Sid,
     
     Let's meet tomorrow at 2:30 PM in the conference room.
     
@@ -107,18 +107,21 @@ test('should extract date and time information', async () => {
     Alex
   `;
 
-  const result = await b.ExtractOwnerCalendarIntent(email, '2025-01-15 10:00');
+  const result = await b.ExtractCalendarIntent(email);
   
-  assert.strictEqual(result.intent_type, 'MEETING_CREATE');
-  assert.ok(result.preferred_datetime);
-  assert.ok(result.preferred_datetime.includes('2:30') || result.preferred_datetime.includes('14:30'));
+  assert.strictEqual(result.action_needed, true);
+  assert.ok(result.timerange_start);
+  assert.ok(result.timerange_start.includes('2025-01-16'));
 });
 
 test('should handle relative dates', async () => {
   const email = `
+    From: lisa@company.com
+    To: sid.mathur@gmail.com
     Subject: Next Week Meeting
+    Date: 2025-01-15
     
-    Hi everyone,
+    Hi Sid,
     
     Can we schedule a meeting for next Monday at 9 AM?
     
@@ -126,37 +129,43 @@ test('should handle relative dates', async () => {
     Lisa
   `;
 
-  const result = await b.ExtractOwnerCalendarIntent(email, '2025-01-15 10:00');
+  const result = await b.ExtractCalendarIntent(email);
   
-  assert.strictEqual(result.intent_type, 'MEETING_CREATE');
-  assert.ok(result.preferred_datetime);
-  assert.ok(result.preferred_datetime.includes('09:00') || result.preferred_datetime.includes('9:00'));
+  assert.strictEqual(result.action_needed, true);
+  assert.ok(result.timerange_start);
+  assert.ok(result.baseline_date === '2025-01-15');
 });
 
-test('should extract location information', async () => {
+test('should extract request details', async () => {
   const email = `
+    From: mark@company.com
+    To: sid.mathur@gmail.com
     Subject: Office Meeting
+    Date: 2025-01-15
     
-    Hi team,
+    Hi Sid,
     
-    Let's meet in Conference Room A tomorrow at 3 PM.
+    Let's meet in Conference Room A tomorrow at 3 PM to discuss the quarterly results.
     
     Thanks,
     Mark
   `;
 
-  const result = await b.ExtractOwnerCalendarIntent(email, '2025-01-15 10:00');
+  const result = await b.ExtractCalendarIntent(email);
   
-  assert.strictEqual(result.intent_type, 'MEETING_CREATE');
-  assert.ok(result.location);
-  assert.ok(result.location.toLowerCase().includes('conference room a'));
+  assert.strictEqual(result.action_needed, true);
+  assert.ok(result.request_details);
+  assert.ok(result.request_details.toLowerCase().includes('quarterly results'));
 });
 
 test('should handle virtual meeting requests', async () => {
   const email = `
+    From: emma@company.com
+    To: sid.mathur@gmail.com
     Subject: Zoom Call
+    Date: 2025-01-15
     
-    Hi everyone,
+    Hi Sid,
     
     Let's have a Zoom call tomorrow at 4 PM to discuss the quarterly results.
     
@@ -164,19 +173,22 @@ test('should handle virtual meeting requests', async () => {
     Emma
   `;
 
-  const result = await b.ExtractOwnerCalendarIntent(email, '2025-01-15 10:00');
+  const result = await b.ExtractCalendarIntent(email);
   
-  assert.strictEqual(result.intent_type, 'MEETING_CREATE');
-  assert.ok(result.location);
-  assert.ok(result.location.toLowerCase().includes('zoom'));
+  assert.strictEqual(result.action_needed, true);
+  assert.ok(result.request_details);
+  assert.ok(result.request_details.toLowerCase().includes('zoom'));
 });
 
 // @smoke - Complex scenarios
 test('should handle meeting updates', async () => {
   const email = `
+    From: ryan@company.com
+    To: sid.mathur@gmail.com
     Subject: Update: Tomorrow's Meeting
+    Date: 2025-01-15
     
-    Hi team,
+    Hi Sid,
     
     Quick update - tomorrow's meeting will now include the design team as well.
     
@@ -184,8 +196,8 @@ test('should handle meeting updates', async () => {
     Ryan
   `;
 
-  const result = await b.ExtractOwnerCalendarIntent(email, '2025-01-15 10:00');
+  const result = await b.ExtractCalendarIntent(email);
   
-  assert.ok(['MEETING_UPDATE', 'MEETING_CREATE'].includes(result.intent_type));
-  assert.ok(result.participants && result.participants.includes('design team'));
+  assert.strictEqual(result.action_needed, true);
+  assert.ok(result.participants.includes('design team'));
 });
