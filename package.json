@@ -10,7 +10,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@boundaryml/baml": "^0.65.0",
+    "@boundaryml/baml": "^0.204.0",
     "dotenv": "^16.4.5"
   },
   "devDependencies": {
