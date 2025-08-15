@@ -17,8 +17,8 @@ Behavior
   5) Open questions (if truly blocking)
 
 Stop Criteria
-- As soon as the artifact(s) exist (branch, commit, PR/labels updated), end the run.
-- Do NOT wait for CI to finish. Link to the checks page instead.
+- When the work given to you is complete.
+- When workflows tied to your PR are successful. If workflows fail, your work is not complete. Keep at it.
 
 Output Template (use verbatim)
 - Summary:
@@ -27,7 +27,7 @@ Output Template (use verbatim)
 - Artifacts:
   - Branch: <url>
   - PR: <url>
-  - Checks: <url>
+  - Issue: <url>
 - Next:
   - Let user know when step is complete
 - Notes:
