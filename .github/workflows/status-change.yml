@@ -52,6 +52,8 @@ jobs:
         env:
           PR:    ${{ steps.pr.outputs.pr }}
           LABEL: ${{ steps.pr.outputs.label }}
+          REPO:  ${{ github.repository }}
+          PRNUM: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
           case "$LABEL" in
