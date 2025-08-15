@@ -66,7 +66,7 @@ enum MeetingFormat {
 }
 
 function ExtractOwnerIntent(input: string) -> OwnerIntent {
-  client GPT4o
+  client CustomGPT4o
   prompt #"
     You are an expert at understanding meeting-related requests from calendar owners.
     
