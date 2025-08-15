@@ -44,10 +44,9 @@ jobs:
           set -euo pipefail
           case "$STATE" in
             changes_requested)
-              # Flip to WIP + Draft
+              # Flip to WIP
               gh issue edit "$ISSUE" --repo "$REPO" \
                 --add-label "status:wip" --remove-label "status:needs-review" --remove-label "status:complete" || true
-              gh pr edit "$PRNUM" --repo "$REPO" --draft
               gh pr edit "$PRNUM" --repo "$REPO" \
                 --add-label "status:wip" --remove-label "status:needs-review" --remove-label "status:complete" || true
               ;;
