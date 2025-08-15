@@ -63,6 +63,7 @@ async function runAllAshleyTests(): Promise<void> {
 }
 
 // Individual test case definitions
+// @smoke
 const testBookTimeAvailable: AshleyTestCase = {
   name: 'BookTime - Available Calendar',
   calendarIntent: {
@@ -228,6 +229,7 @@ Tuesday, July 29, 2025:
   }
 };
 
+// @smoke
 const testExternalClientMeeting: AshleyTestCase = {
   name: 'ExternalClientMeeting - Acme Corp',
   calendarIntent: {

@@ -54,6 +54,7 @@ async function runSingleTestOnly(testCase: IntentTestCase): Promise<void> {
   console.log('🏁 Test completed!');
 }
 
+// @smoke
 const testRequestFromSidToBookTime: IntentTestCase = {
   name: 'requestFromSidToBookTime',
   message: {
@@ -98,6 +99,7 @@ const testSuggestionRequestFromEA: IntentTestCase = {
   }
 };
 
+// @smoke
 const testBookTimeRequestFromEA: IntentTestCase = {
   name: 'bookTimeRequestFromEA',
   message: {

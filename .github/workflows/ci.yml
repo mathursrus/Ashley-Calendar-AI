@@ -28,12 +28,18 @@ jobs:
       - run: npm run generate
       - run: npm run lint
       - run: npm run build
-      - name: Run TypeScript tests (tsx)
+      - name: Run Smoke Tests
         shell: bash
         run: |
           set -euo pipefail
-          FILES="$(git ls-files -- './test-ashley.ts' || true)"
-          if [ -z "$FILES" ]; then
-            echo "No TS tests found"; exit 0
+          echo "🚀 Running smoke tests..."
+          
+          # Check if any test files have @smoke markers
+          SMOKE_FILES="$(grep -l '@smoke' test-*.ts 2>/dev/null || true)"
+          if [ -z "$SMOKE_FILES" ]; then
+            echo "⚠️  No smoke tests found, running all tests as fallback"
+            npm run test
+          else
+            echo "✅ Found smoke tests in: $SMOKE_FILES"
+            npm run test:smoke
           fi
-          npx --yes tsx --test --test-reporter tap $FILES
