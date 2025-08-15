@@ -1,267 +1,191 @@
-import './test-utils';
-import { b } from './baml_client';
+import { test } from 'node:test';
+import assert from 'node:assert';
+import { b } from '../baml_client';
+import 'dotenv/config';
 
-/**
- * Simplified test suite for Voice Calendar Intent extraction
- * Tests the single BAML model that extracts intent + parameters
- */
+// @smoke - Core intent detection
+test('should detect meeting creation intent', async () => {
+  const email = `
+    Subject: Meeting Request
+    
+    Hi team,
+    
+    I'd like to schedule a meeting with the engineering team for next Tuesday at 2 PM to discuss the new project requirements.
+    
+    Best regards,
+    John
+  `;
 
-interface VoiceTestCase {
-  name: string;
-  input: string;
-  currentDateTime: string;
-  expectedIntent: string;
-  expectedParameters?: any;
-  description: string;
-}
+  const result = await b.ExtractCalendarIntent(email);
+  
+  assert.strictEqual(result.intent, 'create_meeting');
+  assert.strictEqual(result.participants.length, 1);
+  assert.strictEqual(result.participants[0], 'engineering team');
+});
 
-const VOICE_TEST_CASES: VoiceTestCase[] = [
-  // Schedule Query Tests Only
-  {
-    name: 'schedule_query_today',
-    input: 'what\'s on my schedule today',
-    currentDateTime: '2025-08-07 13:00:00 PST',
-    expectedIntent: 'SCHEDULE_QUERY',
-    expectedParameters: {
-      query_start_date: '2025-08-07 00:00',
-      query_end_date: '2025-08-07 23:59'
-    },
-    description: 'Query schedule for today with absolute dates'
-  },
-  {
-    name: 'schedule_query_rest_of_day',
-    input: 'what\'s on my schedule for the rest of today',
-    currentDateTime: '2025-08-07 13:00:00 PST',
-    expectedIntent: 'SCHEDULE_QUERY',
-    expectedParameters: {
-      query_start_date: '2025-08-07 13:00',
-      query_end_date: '2025-08-07 23:59'
-    },
-    description: 'Query schedule for rest of today with absolute dates'
-  },
-  {
-    name: 'schedule_query_tomorrow',
-    input: 'what do I have tomorrow',
-    currentDateTime: '2025-08-07 13:00:00 PST',
-    expectedIntent: 'SCHEDULE_QUERY',
-    expectedParameters: {
-      query_start_date: '2025-08-08 00:00',
-      query_end_date: '2025-08-08 23:59'
-    },
-    description: 'Query schedule for tomorrow with absolute dates'
-  },
-  {
-    name: 'schedule_query_this_week',
-    input: 'show me this week\'s meetings',
-    currentDateTime: '2025-08-07 13:00:00 PST', // Thursday
-    expectedIntent: 'SCHEDULE_QUERY',
-    description: 'Query schedule for this week'
-  },
-  {
-    name: 'schedule_query_next_week',
-    input: 'what\'s my schedule next week',
-    currentDateTime: '2025-08-07 13:00:00 PST',
-    expectedIntent: 'SCHEDULE_QUERY',
-    description: 'Query schedule for next week'
-  }
-];
+test('should detect meeting cancellation intent', async () => {
+  const email = `
+    Subject: Cancel Tomorrow's Meeting
+    
+    Hi everyone,
+    
+    I need to cancel our meeting scheduled for tomorrow at 3 PM due to a conflict.
+    
+    Thanks,
+    Sarah
+  `;
 
-/**
- * Test the VoiceCalendarIntent BAML function
- */
-async function testOwnerCalendarIntent(testCase: VoiceTestCase): Promise<boolean> {
-  console.log(`\n🧪 Testing: ${testCase.name}`);
-  console.log(`   Input: "${testCase.input}"`);
-  console.log(`   Expected Intent: ${testCase.expectedIntent}`);
+  const result = await b.ExtractCalendarIntent(email);
   
-  try {
-    const result = await b.ExtractOwnerCalendarIntent(testCase.input, testCase.currentDateTime);
-    // Check intent matches
-    const intentMatches = result.intent_type === testCase.expectedIntent;
-    if (intentMatches) {
-      console.log(`   ✅ Intent matches expected`);
-    } else {
-      console.log(`   ❌ Intent mismatch! Expected: ${testCase.expectedIntent}, Got: ${result.intent_type}`);
-    }
-    
-    // Log extracted parameters
-    if (result.intent_type !== 'UNKNOWN') {
-      console.log(`   📋 Extracted parameters:`);
-      
-      switch (result.intent_type) {
-        case 'SCHEDULE_QUERY':
-          console.log(`      - Query Start: ${result.query_start_date}`);
-          console.log(`      - Query End: ${result.query_end_date}`);
-          break;
-        case 'MEETING_CREATE':
-          console.log(`      - Participants: ${result.participants?.join(', ') || 'None'}`);
-          console.log(`      - Datetime: ${result.preferred_datetime}`);
-          console.log(`      - Duration: ${result.duration_minutes || 'Not specified'} minutes`);
-          console.log(`      - Title: ${result.meeting_title || 'Not specified'}`);
-          break;
-        case 'MEETING_UPDATE':
-          console.log(`      - Meeting ID: ${result.meeting_identifier}`);
-          console.log(`      - New Datetime: ${result.new_datetime}`);
-          break;
-        case 'MEETING_CANCEL':
-          console.log(`      - Cancel ID: ${result.cancel_meeting_identifier}`);
-          break;
-        case 'AVAILABILITY_CHECK':
-          console.log(`      - Check Datetime: ${result.availability_datetime}`);
-          console.log(`      - Duration: ${result.availability_duration_minutes || 'Not specified'} minutes`);
-          break;
-      }
-    }
-    
-    return intentMatches;
-    
-  } catch (error) {
-    console.log(`   ❌ Error: ${error}`);
-    return false;
-  }
-}
+  assert.strictEqual(result.intent, 'cancel_meeting');
+});
 
-/**
- * Run all voice intent tests
- */
-export async function runVoiceTests(): Promise<void> {
-  console.log('🎯 Starting Voice Calendar Intent Tests\n');
-  console.log('='.repeat(60));
-  
-  let passed = 0;
-  let failed = 0;
-  
-  for (const testCase of VOICE_TEST_CASES) {
-    try {
-      const success = await testOwnerCalendarIntent(testCase);
-      if (success) {
-        passed++;
-      } else {
-        failed++;
-      }
-    } catch (error) {
-      console.log(`❌ Test failed: ${testCase.name} - ${error}`);
-      failed++;
-    }
+test('should detect meeting rescheduling intent', async () => {
+  const email = `
+    Subject: Reschedule Friday Meeting
     
-    // Small delay between tests
-    await new Promise(resolve => setTimeout(resolve, 500));
-  }
-  
-  console.log('\n' + '='.repeat(60));
-  console.log(`📊 Test Results: ${passed} passed, ${failed} failed`);
-  console.log(`✅ Success rate: ${((passed / (passed + failed)) * 100).toFixed(1)}%`);
-}
+    Hi team,
+    
+    Can we move our Friday 10 AM meeting to Monday at the same time?
+    
+    Best,
+    Mike
+  `;
 
-/**
- * Test specific scenarios for debugging
- */
-async function testSpecificScenarios(): Promise<void> {
-  console.log('🔍 Testing Specific Scenarios\n');
+  const result = await b.ExtractCalendarIntent(email);
   
-  // Test datetime conversion accuracy
-  const datetimeTests = [
-    {
-      input: 'schedule a meeting tomorrow at 2pm',
-      currentDateTime: '2025-08-07 13:00:00 PST',
-      expectedDatetime: '2025-08-08 14:00'
-    },
-    {
-      input: 'what\'s my schedule today',
-      currentDateTime: '2025-08-07 13:00:00 PST',
-      expectedStart: '2025-08-07 00:00',
-      expectedEnd: '2025-08-07 23:59'
-    }
-  ];
-  
-  for (const test of datetimeTests) {
-    console.log(`\n🕐 Testing datetime conversion:`);
-    console.log(`   Input: "${test.input}"`);
-    console.log(`   Current: ${test.currentDateTime}`);
-    
-    try {
-      const result = await b.ExtractOwnerCalendarIntent(test.input, test.currentDateTime);
-      console.log(`   Result datetime: ${result.preferred_datetime || result.query_start_date}`);
-    } catch (error) {
-      console.log(`   Error: ${error}`);
-    }
-  }
-}
+  assert.strictEqual(result.intent, 'reschedule_meeting');
+});
 
-/**
- * Performance test for voice intent extraction
- */
-async function performanceTest(): Promise<void> {
-  console.log('\n⚡ Performance Test\n');
-  
-  const testInput = 'schedule a meeting with John tomorrow at 2pm';
-  const currentDateTime = '2025-08-07 13:00:00 PST';
-  const iterations = 5;
-  
-  const times: number[] = [];
-  
-  for (let i = 0; i < iterations; i++) {
-    const startTime = Date.now();
+test('should extract participants correctly', async () => {
+  const email = `
+    Subject: Team Sync
     
-    try {
-      await b.ExtractOwnerCalendarIntent(testInput, currentDateTime);
-      const endTime = Date.now();
-      const duration = endTime - startTime;
-      times.push(duration);
-      console.log(`   Run ${i + 1}: ${duration}ms`);
-    } catch (error) {
-      console.log(`   Run ${i + 1}: Error - ${error}`);
-    }
-  }
-  
-  if (times.length > 0) {
-    const avgTime = times.reduce((a, b) => a + b, 0) / times.length;
-    const minTime = Math.min(...times);
-    const maxTime = Math.max(...times);
+    Hi Alice, Bob, and Charlie,
     
-    console.log(`\n📈 Performance Summary:`);
-    console.log(`   Average: ${avgTime.toFixed(1)}ms`);
-    console.log(`   Min: ${minTime}ms`);
-    console.log(`   Max: ${maxTime}ms`);
-    console.log(`   Target: <3000ms for Siri compatibility`);
+    Let's have a team sync next week. I'll send out calendar invites.
     
-    if (avgTime < 3000) {
-      console.log(`   ✅ Performance target met!`);
-    } else {
-      console.log(`   ⚠️  Performance target not met`);
-    }
-  }
-}
+    Thanks,
+    David
+  `;
 
-/**
- * Main test runner
- */
-async function main(): Promise<void> {
-  console.log('🎙️  Ashley Voice Calendar Intent Test Suite');
-  console.log('Testing single BAML model approach\n');
+  const result = await b.ExtractCalendarIntent(email);
   
-  try {
-    // Run main test suite
-    await runVoiceTests();
-    
-    // Run specific scenario tests
-    await testSpecificScenarios();
-    
-    // Run performance test
-    await performanceTest();
-    
-    console.log('\n🎉 All tests completed!');
-    
-  } catch (error) {
-    console.error('❌ Test suite failed:', error);
-    process.exit(1);
-  }
-}
+  assert.ok(result.participants.length >= 3);
+  assert.ok(result.participants.includes('Alice'));
+  assert.ok(result.participants.includes('Bob'));
+  assert.ok(result.participants.includes('Charlie'));
+});
 
-// Export for use in other files
-export { testOwnerCalendarIntent, VOICE_TEST_CASES };
+test('should handle emails with no calendar intent', async () => {
+  const email = `
+    Subject: Project Update
+    
+    Hi team,
+    
+    Just wanted to give you an update on the project status. Everything is going well.
+    
+    Best,
+    Jane
+  `;
 
-// Run tests if this file is executed directly
-if (require.main === module) {
-  main();
-}
+  const result = await b.ExtractCalendarIntent(email);
+  
+  assert.strictEqual(result.intent, 'no_action');
+});
+
+// @smoke - Date and time extraction
+test('should extract date and time information', async () => {
+  const email = `
+    Subject: Meeting Tomorrow
+    
+    Hi team,
+    
+    Let's meet tomorrow at 2:30 PM in the conference room.
+    
+    Thanks,
+    Alex
+  `;
+
+  const result = await b.ExtractCalendarIntent(email);
+  
+  assert.strictEqual(result.intent, 'create_meeting');
+  assert.ok(result.datetime);
+  assert.ok(result.datetime.includes('2:30'));
+});
+
+test('should handle relative dates', async () => {
+  const email = `
+    Subject: Next Week Meeting
+    
+    Hi everyone,
+    
+    Can we schedule a meeting for next Monday at 9 AM?
+    
+    Best,
+    Lisa
+  `;
+
+  const result = await b.ExtractCalendarIntent(email);
+  
+  assert.strictEqual(result.intent, 'create_meeting');
+  assert.ok(result.datetime);
+  assert.ok(result.datetime.toLowerCase().includes('monday') || result.datetime.includes('9'));
+});
+
+test('should extract location information', async () => {
+  const email = `
+    Subject: Office Meeting
+    
+    Hi team,
+    
+    Let's meet in Conference Room A tomorrow at 3 PM.
+    
+    Thanks,
+    Mark
+  `;
+
+  const result = await b.ExtractCalendarIntent(email);
+  
+  assert.strictEqual(result.intent, 'create_meeting');
+  assert.ok(result.location);
+  assert.ok(result.location.toLowerCase().includes('conference room a'));
+});
+
+test('should handle virtual meeting requests', async () => {
+  const email = `
+    Subject: Zoom Call
+    
+    Hi everyone,
+    
+    Let's have a Zoom call tomorrow at 4 PM to discuss the quarterly results.
+    
+    Best,
+    Emma
+  `;
+
+  const result = await b.ExtractCalendarIntent(email);
+  
+  assert.strictEqual(result.intent, 'create_meeting');
+  assert.ok(result.location);
+  assert.ok(result.location.toLowerCase().includes('zoom') || result.location.toLowerCase().includes('virtual'));
+});
+
+// @smoke - Complex scenarios
+test('should handle meeting updates', async () => {
+  const email = `
+    Subject: Update: Tomorrow's Meeting
+    
+    Hi team,
+    
+    Quick update - tomorrow's meeting will now include the design team as well.
+    
+    Thanks,
+    Ryan
+  `;
+
+  const result = await b.ExtractCalendarIntent(email);
+  
+  assert.ok(['update_meeting', 'create_meeting'].includes(result.intent));
+  assert.ok(result.participants.includes('design team'));
+});
