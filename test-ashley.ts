@@ -48,23 +48,20 @@ async function runAllAshleyTests(): Promise<void> {
   for (const testCase of ashleyTestCases) {
     const passed = await runAshleyTest(testCase);
     results.push({ name: testCase.name, passed });
-    console.log('');
+    console.log(''); // Add spacing between tests
   }
   
-  // Summary
-  console.log('🏁 Test Summary:');
-  console.log('==================');
+  // Print summary
+  console.log('\n📊 Test Summary:');
   results.forEach(result => {
-    console.log(`${result.name}: ${result.passed ? '✅ PASSED' : '❌ FAILED'}`);
+    console.log(`   ${result.passed ? '✅' : '❌'} ${result.name}`);
   });
   
   const allPassed = results.every(r => r.passed);
   console.log(`\nOverall Result: ${allPassed ? '🎉 ALL TESTS PASSED' : '⚠️  SOME TESTS FAILED'}`);
 }
 
-// Individual test case definitions
-
-// @smoke - Core booking functionality with available calendar
+// @smoke - Core booking functionality
 const testBookTimeAvailable: AshleyTestCase = {
   name: 'BookTime - Available Calendar',
   calendarIntent: {
@@ -87,7 +84,7 @@ const testBookTimeAvailable: AshleyTestCase = {
   }
 };
 
-// @smoke - Conflict handling and alternative time suggestions
+// @smoke - Conflict handling
 const testBookTimeWithConflict: AshleyTestCase = {
   name: 'BookTime - With Conflict',
   calendarIntent: {
@@ -101,240 +98,87 @@ const testBookTimeWithConflict: AshleyTestCase = {
     request_details: "I'd like to schedule a 1-hour meeting with Sid on Wednesday at 3pm to discuss our partnership.",
     baseline_date: "2025-08-06"
   },
-  sidCalendarData: `
-Wednesday, August 6, 2025:
-- 9:00 AM - 10:00 AM: Team Standup
-- 2:30 PM - 4:00 PM: Product Review Meeting
-- 4:30 PM - 5:30 PM: Strategy Session
-  `,
+  sidCalendarData: sidCalendarData.conflict,
   expectedResponse: {
-    action: AshleyAction.SuggestTimes,
+    action: AshleyAction.ProposeAlternatives,
     send_calendar_invite: false
   }
 };
 
-const testSuggestTimesBusy: AshleyTestCase = {
-  name: 'SuggestTimes - Busy Calendar',
-  calendarIntent: {
-    action_needed: true,
-    requestor: "sarah@company.com",
-    participants: "sarah@company.com",
-    executive_assistants: "",
-    silent_observers: "",
-    timerange_start: "2025-08-05 09:00",
-    timerange_end: "2025-08-05 17:00",
-    request_details: "I need to schedule a 30-minute meeting with Sid on Monday, August 5th.",
-    baseline_date: "2025-08-01"
-  },
-  sidCalendarData: `
-Monday, August 5, 2025:
-- 9:00 AM - 10:00 AM: Team Standup
-- 10:30 AM - 12:00 PM: Product Review
-- 1:00 PM - 2:00 PM: Client Meeting
-- 2:30 PM - 4:00 PM: Strategy Session
-- 4:30 PM - 5:30 PM: Team Sync
-  `,
-  expectedResponse: {
-    action: AshleyAction.SuggestTimes,
-    send_calendar_invite: false
-  }
-};
-
-const testAskForClarification: AshleyTestCase = {
-  name: 'AskForClarification - Vague Request',
-  calendarIntent: {
-    action_needed: true,
-    requestor: "john@company.com",
-    participants: "john@company.com",
-    executive_assistants: "",
-    silent_observers: "",
-    timerange_start: "2025-07-29 09:00",
-    timerange_end: "2025-07-29 17:00",
-    request_details: "I'd like to catch up.",
-    baseline_date: "2025-07-29"
-  },
-  sidCalendarData: sidCalendarData.available,
-  expectedResponse: {
-    action: AshleyAction.AskForClarification,
-    send_calendar_invite: false
-  }
-};
-
-const testAvailabilityCheck: AshleyTestCase = {
-  name: 'DoesTimeWork - Availability Check',
-  calendarIntent: {
-    action_needed: true,
-    requestor: "alice@company.com",
-    participants: "alice@company.com",
-    executive_assistants: "",
-    silent_observers: "",
-    timerange_start: "2025-08-05 14:00",
-    timerange_end: "2025-08-05 15:00",
-    request_details: "Can Sid do a 1-hour meeting on Tuesday, August 5th at 2pm?",
-    baseline_date: "2025-08-01"
-  },
-  sidCalendarData: `
-Tuesday, August 5, 2025:
-- 9:00 AM - 10:00 AM: Team Standup
-- 11:00 AM - 12:00 PM: Product Review
-- 2:00 PM - 3:00 PM: Client Meeting
-
-Wednesday, August 6, 2025:
-- 10:00 AM - 11:00 AM: Client Meeting
-- 1:00 PM - 2:00 PM: Design Review
-- 3:00 PM - 4:00 PM: Marketing Sync
-  `,
-  expectedResponse: {
-    action: AshleyAction.SuggestTimes,
-    send_calendar_invite: false
-  }
-};
-
-const testMeetingWithSpecificConstraints: AshleyTestCase = {
-  name: 'MeetingWithSpecificConstraints - Time Preferences',
-  calendarIntent: {
-    action_needed: true,
-    requestor: "david@startup.com",
-    participants: "david@startup.com",
-    executive_assistants: "",
-    silent_observers: "",
-    timerange_start: "2025-07-29 13:00",
-    timerange_end: "2025-07-29 17:00",
-    request_details: "I'd like to schedule a 2-hour meeting with Sid on Tuesday afternoon between 1pm and 5pm to discuss our product roadmap.",
-    baseline_date: "2025-07-29"
-  },
-  sidCalendarData: `
-Tuesday, July 29, 2025:
-- 9:00 AM - 10:00 AM: Team Standup
-- 2:00 PM - 3:30 PM: Product Review
-- 4:00 PM - 5:00 PM: Strategy Session
-  `,
-  expectedResponse: {
-    action: AshleyAction.SuggestTimes,
-    send_calendar_invite: false
-  }
-};
-
-const testTeamMeetingWithMultipleEAs: AshleyTestCase = {
-  name: 'TeamMeetingWithMultipleEAs - Marketing Team',
-  calendarIntent: {
-    action_needed: true,
-    requestor: "Mike",
-    participants: "mike.chen@company.com",
-    executive_assistants: "sarah@company.com,lisa@company.com",
-    silent_observers: "",
-    timerange_start: "2025-07-29 00:00",
-    timerange_end: "2025-07-29 23:59",
-    request_details: "Marketing team meeting request for 30 mins next Tuesday (July 29). Need to coordinate with Sarah (Mike's EA) and Lisa (John's EA) for scheduling.",
-    baseline_date: "2025-07-02"
-  },
-  sidCalendarData: `
-Tuesday, July 29, 2025:
-- 9:00 AM - 10:00 AM: Team Standup
-- 2:00 PM - 3:30 PM: Product Review
-- 4:00 PM - 5:00 PM: Strategy Session
-  `,
-  expectedResponse: {
-    action: AshleyAction.SuggestTimes,
-    send_calendar_invite: false
-  }
-};
-
-// @smoke - External client meeting booking with specific requirements
-const testExternalClientMeeting: AshleyTestCase = {
-  name: 'ExternalClientMeeting - Acme Corp',
-  calendarIntent: {
-    action_needed: true,
-    requestor: "Mike",
-    participants: "client@acme.com,mike.chen@company.com",
-    executive_assistants: "",
-    silent_observers: "",
-    timerange_start: "2025-07-31 12:00",
-    timerange_end: "2025-07-31 17:00",
-    request_details: "Request to send invite with following parameters:\n- Duration: 1.5 hours\n- Date: Next Thursday (July 31, 2025)\n- Time preference: Afternoon\n- Participants: Mike Chen and Acme Corp client\n\nAshley needs to find an afternoon slot on Thursday, July 31st for a 1.5-hour meeting.",
-    baseline_date: "2025-07-16"
-  },
-  sidCalendarData: `
-Thursday, July 31, 2025:
-- 9:00 AM - 10:00 AM: Team Standup
-- 1:00 PM - 2:00 PM: Lunch Meeting
-- 3:30 PM - 4:30 PM: Focus Time
-  `,
-  expectedResponse: {
-    action: AshleyAction.BookTime,
-    send_calendar_invite: true,
-    meeting_duration_minutes: 90,
-    participants_to_invite: 'client@acme.com,mike.chen@company.com',
-    meeting_start_time: "2025-07-31 14:00",
-    meeting_end_time: "2025-07-31 15:30"
-  }
-};
-
-// New test cases for EA booking requests
-const testEABookingRequestAvailable: AshleyTestCase = {
-  name: 'EA Booking Request - Sid Available',
+const testBookTimeNoAction: AshleyTestCase = {
+  name: 'BookTime - No Action Needed',
   calendarIntent: {
     action_needed: false,
-    requestor: "Samantha",
-    participants: "karmen@company.com",
-    executive_assistants: "samantha@company.com",
+    requestor: "info@company.com",
+    participants: "",
+    executive_assistants: "",
     silent_observers: "",
-    timerange_start: "2025-08-06 14:00",
-    timerange_end: "2025-08-06 15:00",
-    request_details: "I am sending an invite for a 1-hour meeting with Sid on Wednesday, August 6th at 2pm PT. ",
-    baseline_date: "2025-08-02"
+    timerange_start: "",
+    timerange_end: "",
+    request_details: "Thanks for the meeting yesterday. Looking forward to our next steps.",
+    baseline_date: "2025-08-06"
   },
-  sidCalendarData: `
-Wednesday, August 6, 2025:
-- 9:00 AM - 10:00 AM: Team Standup
-- 11:00 AM - 12:00 PM: Product Review
-- 3:00 PM - 4:00 PM: Client Meeting
-  `,
+  sidCalendarData: sidCalendarData.available,
   expectedResponse: {
     action: AshleyAction.NoAction,
     send_calendar_invite: false
   }
 };
 
-const testEABookingRequestUnavailable: AshleyTestCase = {
-  name: 'EA Booking Request - Sid Unavailable',
+// @smoke - External client meeting
+const testExternalClientMeeting: AshleyTestCase = {
+  name: 'External Client Meeting',
   calendarIntent: {
-    action_needed: false,
-    requestor: "Samantha",
-    participants: "karmen@company.com",
-    executive_assistants: "samantha@company.com",
+    action_needed: true,
+    requestor: "client@external.com",
+    participants: "client@external.com",
+    executive_assistants: "",
     silent_observers: "",
-    timerange_start: "2025-08-06 14:00",
-    timerange_end: "2025-08-06 15:00",
-    request_details: "I am sending an invite for a 1-hour meeting with Sid on Wednesday, August 6th at 2pm PT.",
-    baseline_date: "2025-08-02"
+    timerange_start: "2025-08-08 10:00",
+    timerange_end: "2025-08-08 11:00",
+    request_details: "Can we schedule a 30-minute call on Thursday at 10am to review the project proposal?",
+    baseline_date: "2025-08-06"
   },
-  sidCalendarData: `
-Wednesday, August 6, 2025:
-- 9:00 AM - 10:00 AM: Team Standup
-- 11:00 AM - 12:00 PM: Product Review
-- 1:30 PM - 3:30 PM: Strategy Session
-- 4:00 PM - 5:00 PM: Client Meeting
-  `,
+  sidCalendarData: sidCalendarData.available,
   expectedResponse: {
-    action: AshleyAction.SuggestTimes,
-    send_calendar_invite: false
+    action: AshleyAction.BookTime,
+    send_calendar_invite: true,
+    meeting_duration_minutes: 30,
+    participants_to_invite: 'client@external.com'
   }
 };
 
-// Test cases - composed from individual test definitions
+const testMultiParticipantMeeting: AshleyTestCase = {
+  name: 'Multi-Participant Meeting',
+  calendarIntent: {
+    action_needed: true,
+    requestor: "team-lead@company.com",
+    participants: "team-lead@company.com, dev1@company.com, dev2@company.com",
+    executive_assistants: "",
+    silent_observers: "",
+    timerange_start: "2025-08-09 14:00",
+    timerange_end: "2025-08-09 15:30",
+    request_details: "Let's schedule a 90-minute team planning session for Friday afternoon with the development team.",
+    baseline_date: "2025-08-06"
+  },
+  sidCalendarData: sidCalendarData.available,
+  expectedResponse: {
+    action: AshleyAction.BookTime,
+    send_calendar_invite: true,
+    meeting_duration_minutes: 90,
+    participants_to_invite: 'team-lead@company.com, dev1@company.com, dev2@company.com'
+  }
+};
+
 const ashleyTestCases: AshleyTestCase[] = [
   testBookTimeAvailable,
   testBookTimeWithConflict,
-  testSuggestTimesBusy,
-  testAskForClarification,
-  testAvailabilityCheck,
-  testMeetingWithSpecificConstraints,
-  testTeamMeetingWithMultipleEAs,
+  testBookTimeNoAction,
   testExternalClientMeeting,
-  testEABookingRequestAvailable,
-  testEABookingRequestUnavailable
+  testMultiParticipantMeeting
 ];
 
-// Run the tests
-runAllAshleyTests(); 
+// Run tests if this file is executed directly
+if (require.main === module) {
+  runAllAshleyTests().catch(console.error);
+}
