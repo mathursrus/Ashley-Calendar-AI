@@ -24,12 +24,6 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Upgrade GitHub CLI
-        run: |
-          sudo apt update
-          sudo apt install -y gh
-          gh --version
-
       - name: Derive review state, issue number, and branch
         id: vars
         shell: bash
@@ -58,7 +52,11 @@ jobs:
               # Flip to WIP + Draft
               gh issue edit "$ISSUE" --repo "$REPO" \
                 --add-label "status:wip" --remove-label "status:needs-review" --remove-label "status:complete" || true
-              gh pr edit "$PRNUM" --repo "$REPO" --draft
+              # Convert PR to draft via GitHub API (works on any runner)
+              gh api \
+                --method POST \
+                repos/$REPO/pulls/$PRNUM/draft \
+                --silent
               gh pr edit "$PRNUM" --repo "$REPO" \
                 --add-label "status:wip" --remove-label "status:needs-review" --remove-label "status:complete" || true
               ;;
