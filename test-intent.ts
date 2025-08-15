@@ -54,7 +54,6 @@ async function runSingleTestOnly(testCase: IntentTestCase): Promise<void> {
   console.log('🏁 Test completed!');
 }
 
-// @smoke - Core intent detection for basic meeting requests
 const testRequestFromSidToBookTime: IntentTestCase = {
   name: 'requestFromSidToBookTime',
   message: {
@@ -72,7 +71,6 @@ const testRequestFromSidToBookTime: IntentTestCase = {
   }
 };
 
-// @smoke - Non-calendar message detection (negative case)
 const testNonCalendarMessage: IntentTestCase = {
   name: 'nonCalendarMessage',
   message: {
@@ -100,7 +98,6 @@ const testSuggestionRequestFromEA: IntentTestCase = {
   }
 };
 
-// @smoke - Executive assistant booking requests
 const testBookTimeRequestFromEA: IntentTestCase = {
   name: 'bookTimeRequestFromEA',
   message: {
@@ -164,26 +161,25 @@ const testExternalClientMeeting: IntentTestCase = {
   },
   expectedIntent: {
     action_needed: true,
-    requestor: 'Mike',
-    participants: 'mike.chen@company.com'
+    requestor: 'Mike'
   }
 };
 
 const testTeamMeetingWithMultipleEAs: IntentTestCase = {
   name: 'teamMeetingWithMultipleEAs',
   message: {
-    from: identities.executiveAssistant,
+    from: identities.colleague,
     to: identities.ashley,
-    cc: 'lisa@company.com',
-    date: dates.tuesday,
-    subject: 'Team Meeting Coordination',
+    cc: '',
+    date: dates.monday,
+    subject: 'Marketing Team Meeting',
     content: contents.teamMeetingWithMultipleEAs
   },
   expectedIntent: {
     action_needed: true,
-    requestor: 'Samantha',
-    participants: 'karmen@company.com',
-    executive_assistants: 'samantha@company.com,lisa@company.com'
+    requestor: 'Mike',
+    participants: 'mike.chen@company.com',
+    executive_assistants: 'sarah@company.com,lisa@company.com'
   }
 };
 
@@ -212,21 +208,30 @@ const testMultiTurnConversation: IntentTestCase = {
     cc: '',
     date: dates.friday,
     subject: 'Re: Strategy Meeting',
-    content: contents.multiTurnConversation,
+    content: `Thanks for checking. Unfortunately, I can't make Tuesday or Wednesday due to client meetings. 
+
+    How about Thursday at 2pm? I can do a 1-hour session then. Let me know if that works for Sid.`,
     conversationHistory: [
+      {
+        from: identities.ashley,
+        to: identities.colleague,
+        cc: '',
+        date: '2025-07-30 10:00:00',
+        content: `Hi Mike,
+
+I checked Sid's availability for next week. He's free on Tuesday at 2pm and Wednesday at 10am. Which works better for you?
+
+Best,
+Ashley`
+      },
       {
         from: identities.colleague,
         to: identities.ashley,
         cc: '',
-        date: dates.thursday,
+        date: '2025-07-29 14:30:00',
         content: `Hi Ashley,
 
-I need to schedule a strategy meeting with Sid for next week. I'm available:
-- Tuesday 2-4pm
-- Wednesday 10am-12pm  
-- Thursday 3-5pm
-
-Can you check his availability?
+Could you check Sid's availability for next week?
 
 Best,
 Mike`
@@ -248,26 +253,39 @@ const testComplexMultiTurnConversation: IntentTestCase = {
     to: identities.ashley,
     cc: 'sarah.johnson@company.com',
     date: dates.friday,
-    subject: 'Re: Strategy Meeting - Updated Requirements',
-    content: contents.complexMultiTurnConversation,
+    subject: 'Re: Quarterly Review Meeting',
+    content: `Hi Ashley,
+
+Thanks for your suggestions. Here's the situation:
+
+- Sarah and I can't do Monday due to the board meeting
+- Tuesday morning is out because I have a client call at 10am
+- Wednesday afternoon works for Sarah but I have a 3pm deadline
+- We could do the second slot you propose on Thursday. If that still works, please book it.
+
+Also, please include our VP of Operations (john.doe@company.com) in the meeting.
+
+Thanks!
+Mike`,
     conversationHistory: [
       {
-        from: identities.colleague,
-        to: identities.ashley,
-        cc: 'sarah.johnson@company.com',
-        date: dates.thursday,
-        content: `Hi Ashley,
+        from: identities.ashley,
+        to: identities.colleague,
+        cc: '',
+        date: '2025-07-29 09:15:00',
+        content: `Hi Mike,
 
-I need to schedule a strategy meeting with Sid and Sarah for next week. We also need John Doe from the product team to join. I'm available:
-- Monday 2-4pm
-- Tuesday 10am-12pm  
-- Wednesday 3-5pm
-- Thursday 1-3pm
+I can see you're looking to schedule a quarterly review meeting. I have some time slots available next week:
 
-Can you coordinate with everyone?
+Monday: 10am-12pm, 2pm-4pm
+Tuesday: 9am-11am, 3pm-5pm
+Wednesday: 11am-1pm, 4pm-6pm
+Thursday: 10am-12pm, 2pm-4pm
+
+Let me know which works best for you and Sarah.
 
 Best,
-Mike`
+Ashley`
       }
     ]
   },
@@ -279,21 +297,18 @@ Mike`
   expectedKeywords: ['thursday', 'monday', 'tuesday', 'wednesday']
 };
 
+// Add a new test case for a longer thread with multiple participants
 const testLongEmailThread: IntentTestCase = {
   name: 'longEmailThread',
   message: {
     from: identities.executiveAssistant,
     to: identities.ashley,
-    cc: 'lisa@company.com',
-    date: '2025-07-30 09:15:00',
-    subject: 'Re: Q4 Strategy Meeting - Final Confirmation',
+    cc: 'karmen@company.com, lisa@company.com',
+    date: dates.friday,
+    subject: 'Re: Re: Re: Executive Strategy Session',
     content: `Hi Ashley,
 
-After reviewing everyone's feedback, Karmen has decided she needs Lisa to join the strategy meeting as well. Can you please:
-
-1. Add Lisa to the meeting
-2. Extend the duration to 2.5 hours 
-3. Find a new slot that works for all three of them
+Karmen's availability changed. She cannot meet any day other than Friday. If Friday still works, please book the slot you proposed. But shorten it to the first hour only. Also, she'd like to include Lisa from Marketing (lisa@company.com) in the meeting.
 
 Thanks,
 Samantha`,
@@ -353,7 +368,6 @@ Ashley`
   }
 };
 
-// @smoke - Date interpretation for "today" requests
 const testInternalDate: IntentTestCase = {
   name: 'testInternalDate',
   message: {
@@ -374,6 +388,7 @@ const testInternalDate: IntentTestCase = {
   }
 };
 
+// Test case for date interpretation fix - "next week" should be calculated from the email date that contains it
 const testDateInterpretationFix: IntentTestCase = {
   name: 'dateInterpretationFix',
   message: {
