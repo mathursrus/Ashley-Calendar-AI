@@ -2,7 +2,7 @@ name: Phase Change Handler
 
 on:
   issues:
-    types: [labeled, unlabeled]
+    types: [labeled]
 
 permissions:
   issues: write
