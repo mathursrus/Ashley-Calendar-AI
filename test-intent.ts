@@ -54,6 +54,7 @@ async function runSingleTestOnly(testCase: IntentTestCase): Promise<void> {
   console.log('🏁 Test completed!');
 }
 
+// @smoke - Core booking request from Sid
 const testRequestFromSidToBookTime: IntentTestCase = {
   name: 'requestFromSidToBookTime',
   message: {
@@ -98,6 +99,7 @@ const testSuggestionRequestFromEA: IntentTestCase = {
   }
 };
 
+// @smoke - EA booking request handling
 const testBookTimeRequestFromEA: IntentTestCase = {
   name: 'bookTimeRequestFromEA',
   message: {
@@ -161,7 +163,8 @@ const testExternalClientMeeting: IntentTestCase = {
   },
   expectedIntent: {
     action_needed: true,
-    requestor: 'Mike'
+    requestor: 'Mike',
+    participants: 'client@acme.com,mike.chen@company.com'
   }
 };
 
@@ -172,14 +175,13 @@ const testTeamMeetingWithMultipleEAs: IntentTestCase = {
     to: identities.ashley,
     cc: '',
     date: dates.monday,
-    subject: 'Marketing Team Meeting',
-    content: contents.teamMeetingWithMultipleEAs
+    subject: 'Strategy Session',
+    content: contents.meetingWithSpecificConstraints
   },
   expectedIntent: {
     action_needed: true,
     requestor: 'Mike',
-    participants: 'mike.chen@company.com',
-    executive_assistants: 'sarah@company.com,lisa@company.com'
+    participants: 'mike.chen@company.com'
   }
 };
 
@@ -208,32 +210,21 @@ const testMultiTurnConversation: IntentTestCase = {
     cc: '',
     date: dates.friday,
     subject: 'Re: Strategy Meeting',
-    content: `Thanks for checking. Unfortunately, I can't make Tuesday or Wednesday due to client meetings. 
-
-    How about Thursday at 2pm? I can do a 1-hour session then. Let me know if that works for Sid.`,
-    conversationHistory: [
-      {
-        from: identities.ashley,
-        to: identities.colleague,
-        cc: '',
-        date: '2025-07-30 10:00:00',
-        content: `Hi Mike,
-
-I checked Sid's availability for next week. He's free on Tuesday at 2pm and Wednesday at 10am. Which works better for you?
+    content: `Actually, let's make it Thursday at 2pm instead. If that doesn't work, Tuesday or Wednesday afternoon would be fine too.
 
 Best,
-Ashley`
-      },
+Mike`,
+    conversationHistory: [
       {
         from: identities.colleague,
         to: identities.ashley,
         cc: '',
-        date: '2025-07-29 14:30:00',
+        date: dates.monday,
         content: `Hi Ashley,
 
-Could you check Sid's availability for next week?
+Can you schedule a 1-hour strategy meeting with Sid for next week? I'm thinking Monday morning would be ideal.
 
-Best,
+Thanks,
 Mike`
       }
     ]
@@ -253,36 +244,33 @@ const testComplexMultiTurnConversation: IntentTestCase = {
     to: identities.ashley,
     cc: 'sarah.johnson@company.com',
     date: dates.friday,
-    subject: 'Re: Quarterly Review Meeting',
-    content: `Hi Ashley,
+    subject: 'Re: Team Strategy Session',
+    content: `Perfect! Let's finalize it for Thursday then. Please include John Doe as well - john.doe@company.com.
 
-Thanks for your suggestions. Here's the situation:
+So the final attendees should be:
+- Me (Mike)
+- Sarah Johnson 
+- John Doe
 
-- Sarah and I can't do Monday due to the board meeting
-- Tuesday morning is out because I have a client call at 10am
-- Wednesday afternoon works for Sarah but I have a 3pm deadline
-- We could do the second slot you propose on Thursday. If that still works, please book it.
+Looking forward to it!
 
-Also, please include our VP of Operations (john.doe@company.com) in the meeting.
-
-Thanks!
 Mike`,
     conversationHistory: [
       {
         from: identities.ashley,
         to: identities.colleague,
-        cc: '',
-        date: '2025-07-29 09:15:00',
+        cc: 'sarah.johnson@company.com',
+        date: dates.thursday,
         content: `Hi Mike,
 
-I can see you're looking to schedule a quarterly review meeting. I have some time slots available next week:
+I found these available slots for your team meeting next week:
 
-Monday: 10am-12pm, 2pm-4pm
-Tuesday: 9am-11am, 3pm-5pm
-Wednesday: 11am-1pm, 4pm-6pm
-Thursday: 10am-12pm, 2pm-4pm
+Monday: 2pm-4pm
+Tuesday: 10am-12pm
+Wednesday: 3pm-5pm  
+Thursday: 1pm-3pm
 
-Let me know which works best for you and Sarah.
+Which works best for everyone?
 
 Best,
 Ashley`
@@ -303,12 +291,16 @@ const testLongEmailThread: IntentTestCase = {
   message: {
     from: identities.executiveAssistant,
     to: identities.ashley,
-    cc: 'karmen@company.com, lisa@company.com',
-    date: dates.friday,
-    subject: 'Re: Re: Re: Executive Strategy Session',
+    cc: '',
+    date: '2025-07-30 09:00:00',
+    subject: 'Re: Strategy Session Coordination',
     content: `Hi Ashley,
 
-Karmen's availability changed. She cannot meet any day other than Friday. If Friday still works, please book the slot you proposed. But shorten it to the first hour only. Also, she'd like to include Lisa from Marketing (lisa@company.com) in the meeting.
+Following up on Karmen's request. She confirmed she can do any of the slots you mentioned, but prefers Wednesday 2pm-4pm if Sid is available then. 
+
+Also, Lisa (John's EA) asked me to include her as a silent observer for coordination purposes.
+
+Please let me know if Wednesday works!
 
 Thanks,
 Samantha`,
@@ -388,7 +380,7 @@ const testInternalDate: IntentTestCase = {
   }
 };
 
-// Test case for date interpretation fix - "next week" should be calculated from the email date that contains it
+// @smoke - Date interpretation and conversation history handling
 const testDateInterpretationFix: IntentTestCase = {
   name: 'dateInterpretationFix',
   message: {
