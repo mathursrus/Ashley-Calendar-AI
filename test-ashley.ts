@@ -63,6 +63,8 @@ async function runAllAshleyTests(): Promise<void> {
 }
 
 // Individual test case definitions
+
+// @smoke - Core booking functionality with available calendar
 const testBookTimeAvailable: AshleyTestCase = {
   name: 'BookTime - Available Calendar',
   calendarIntent: {
@@ -85,6 +87,7 @@ const testBookTimeAvailable: AshleyTestCase = {
   }
 };
 
+// @smoke - Conflict handling and alternative time suggestions
 const testBookTimeWithConflict: AshleyTestCase = {
   name: 'BookTime - With Conflict',
   calendarIntent: {
@@ -118,12 +121,19 @@ const testSuggestTimesBusy: AshleyTestCase = {
     participants: "sarah@company.com",
     executive_assistants: "",
     silent_observers: "",
-    timerange_start: "2025-08-04 10:00",
-    timerange_end: "2025-08-08 16:00",
-    request_details: "I'd like to schedule a 1-hour meeting to discuss the new project timeline. I'm available any time next week between 10 AM and 4 PM.",
+    timerange_start: "2025-08-05 09:00",
+    timerange_end: "2025-08-05 17:00",
+    request_details: "I need to schedule a 30-minute meeting with Sid on Monday, August 5th.",
     baseline_date: "2025-08-01"
   },
-  sidCalendarData: sidCalendarData.busy,
+  sidCalendarData: `
+Monday, August 5, 2025:
+- 9:00 AM - 10:00 AM: Team Standup
+- 10:30 AM - 12:00 PM: Product Review
+- 1:00 PM - 2:00 PM: Client Meeting
+- 2:30 PM - 4:00 PM: Strategy Session
+- 4:30 PM - 5:30 PM: Team Sync
+  `,
   expectedResponse: {
     action: AshleyAction.SuggestTimes,
     send_calendar_invite: false
@@ -134,12 +144,12 @@ const testAskForClarification: AshleyTestCase = {
   name: 'AskForClarification - Vague Request',
   calendarIntent: {
     action_needed: true,
-    requestor: "mike@startup.com",
-    participants: "mike@startup.com",
+    requestor: "john@company.com",
+    participants: "john@company.com",
     executive_assistants: "",
     silent_observers: "",
-    timerange_start: "2025-07-29 00:00",
-    timerange_end: "2025-08-05 23:59",
+    timerange_start: "2025-07-29 09:00",
+    timerange_end: "2025-07-29 17:00",
     request_details: "I'd like to catch up.",
     baseline_date: "2025-07-29"
   },
@@ -158,32 +168,9 @@ const testAvailabilityCheck: AshleyTestCase = {
     participants: "alice@company.com",
     executive_assistants: "",
     silent_observers: "",
-    timerange_start: "2025-07-30 14:00",
-    timerange_end: "2025-07-30 14:45",
-    request_details: "If Sid is available on July 30th at 2pm for a 45-minute call, please schedule it.",
-    baseline_date: "2025-07-20"
-  },
-  sidCalendarData: sidCalendarData.available,
-  expectedResponse: {
-    action: AshleyAction.BookTime,
-    send_calendar_invite: true,
-    meeting_duration_minutes: 45,
-    participants_to_invite: 'alice@company.com'
-  }
-};
-
-// New test cases based on successful intent extraction results
-const testMeetingWithSpecificConstraints: AshleyTestCase = {
-  name: 'MeetingWithSpecificConstraints - Strategy Session',
-  calendarIntent: {
-    action_needed: true,
-    requestor: "Mike",
-    participants: "mike.chen@company.com",
-    executive_assistants: "",
-    silent_observers: "",
-    timerange_start: "2025-08-05 10:00",
-    timerange_end: "2025-08-06 14:00",
-    request_details: "Looking for a 2-hour time slot. Meeting can only be scheduled on Tuesday Aug 5 or Wednesday Aug 6, between 10am-2pm PT.",
+    timerange_start: "2025-08-05 14:00",
+    timerange_end: "2025-08-05 15:00",
+    request_details: "Can Sid do a 1-hour meeting on Tuesday, August 5th at 2pm?",
     baseline_date: "2025-08-01"
   },
   sidCalendarData: `
@@ -196,6 +183,31 @@ Wednesday, August 6, 2025:
 - 10:00 AM - 11:00 AM: Client Meeting
 - 1:00 PM - 2:00 PM: Design Review
 - 3:00 PM - 4:00 PM: Marketing Sync
+  `,
+  expectedResponse: {
+    action: AshleyAction.SuggestTimes,
+    send_calendar_invite: false
+  }
+};
+
+const testMeetingWithSpecificConstraints: AshleyTestCase = {
+  name: 'MeetingWithSpecificConstraints - Time Preferences',
+  calendarIntent: {
+    action_needed: true,
+    requestor: "david@startup.com",
+    participants: "david@startup.com",
+    executive_assistants: "",
+    silent_observers: "",
+    timerange_start: "2025-07-29 13:00",
+    timerange_end: "2025-07-29 17:00",
+    request_details: "I'd like to schedule a 2-hour meeting with Sid on Tuesday afternoon between 1pm and 5pm to discuss our product roadmap.",
+    baseline_date: "2025-07-29"
+  },
+  sidCalendarData: `
+Tuesday, July 29, 2025:
+- 9:00 AM - 10:00 AM: Team Standup
+- 2:00 PM - 3:30 PM: Product Review
+- 4:00 PM - 5:00 PM: Strategy Session
   `,
   expectedResponse: {
     action: AshleyAction.SuggestTimes,
@@ -228,6 +240,7 @@ Tuesday, July 29, 2025:
   }
 };
 
+// @smoke - External client meeting booking with specific requirements
 const testExternalClientMeeting: AshleyTestCase = {
   name: 'ExternalClientMeeting - Acme Corp',
   calendarIntent: {
