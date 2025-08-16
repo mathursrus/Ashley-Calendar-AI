@@ -54,39 +54,56 @@ async function runSingleTestOnly(testCase: IntentTestCase): Promise<void> {
   console.log('🏁 Test completed!');
 }
 
+// @smoke
 const testRequestFromSidToBookTime: IntentTestCase = {
   name: 'requestFromSidToBookTime',
   message: {
     from: identities.sid,
     to: identities.ashley,
-    cc: lists.multiplePeople,
+    cc: '',
     date: dates.monday,
-    subject: subjects.bookTimeRequest,
-    content: contents.requestFromSid
+    subject: subjects.meetingRequest,
+    content: contents.sidToAshleyBookTime
   },
   expectedIntent: {
     action_needed: true,
     requestor: 'Sid',
-    participants: 'mike.chen@company.com,john.smith@external.com'
+    participants: 'sarah@company.com',
+    executive_assistants: '',
+    silent_observers: '',
+    timerange_start: '2025-08-05 00:00',
+    timerange_end: '2025-08-09 23:59',
+    baseline_date: '2025-08-04'
   }
 };
 
 const testNonCalendarMessage: IntentTestCase = {
   name: 'nonCalendarMessage',
   message: {
-    ...testRequestFromSidToBookTime.message,
+    from: identities.colleague,
+    to: identities.ashley,
+    cc: '',
+    date: dates.monday,
+    subject: 'Random Question',
     content: contents.nonCalendarMessage
   },
   expectedIntent: {
-    action_needed: false
+    action_needed: false,
+    requestor: '',
+    participants: '',
+    executive_assistants: '',
+    silent_observers: ''
   }
 };
 
 const testSuggestionRequestFromEA: IntentTestCase = {
   name: 'suggestionRequestFromEA',
   message: {
-    ...testRequestFromSidToBookTime.message,
     from: identities.executiveAssistant,
+    to: identities.ashley,
+    cc: '',
+    date: dates.monday,
+    subject: subjects.meetingRequest,
     content: contents.suggestionRequestFromEA
   },
   expectedIntent: {
@@ -94,10 +111,11 @@ const testSuggestionRequestFromEA: IntentTestCase = {
     requestor: 'Samantha',
     participants: 'karmen@company.com',
     executive_assistants: 'samantha@company.com',
-    silent_observers: 'mike.chen@company.com,john.smith@external.com'
+    silent_observers: ''
   }
 };
 
+// @smoke
 const testBookTimeRequestFromEA: IntentTestCase = {
   name: 'bookTimeRequestFromEA',
   message: {
