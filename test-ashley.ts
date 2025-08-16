@@ -7,6 +7,7 @@ interface AshleyTestCase {
   calendarIntent: CalendarIntent;
   sidCalendarData: string;
   expectedResponse?: Partial<AshleyResponse>;
+  tags?: string[]; // Added tags property for smoke test selection
 }
 
 // Test runner for Ashley responses
@@ -40,12 +41,19 @@ export async function runAshleyTest(testCase: AshleyTestCase): Promise<boolean> 
 }
 
 // Main test runner
-async function runAllAshleyTests(): Promise<void> {
+export async function runAllAshleyTests(options: { tags?: string[] } = {}): Promise<void> {
   console.log('🧪 Testing Ashley Calendar Assistant...\n');
   
   const results: { name: string; passed: boolean }[] = [];
   
-  for (const testCase of ashleyTestCases) {
+  // Filter test cases by tags if provided
+  const testsToRun = options.tags 
+    ? ashleyTestCases.filter(test => test.tags?.some(tag => options.tags.includes(tag)))
+    : ashleyTestCases;
+  
+  console.log(`Running ${testsToRun.length} test cases${options.tags ? ` with tags: ${options.tags.join(', ')}` : ''}\n`);
+  
+  for (const testCase of testsToRun) {
     const passed = await runAshleyTest(testCase);
     results.push({ name: testCase.name, passed });
     console.log('');
@@ -60,11 +68,17 @@ async function runAllAshleyTests(): Promise<void> {
   
   const allPassed = results.every(r => r.passed);
   console.log(`\nOverall Result: ${allPassed ? '🎉 ALL TESTS PASSED' : '⚠️  SOME TESTS FAILED'}`);
+  
+  // Return appropriate exit code
+  if (!allPassed) {
+    process.exitCode = 1;
+  }
 }
 
 // Individual test case definitions
 const testBookTimeAvailable: AshleyTestCase = {
   name: 'BookTime - Available Calendar',
+  tags: ['smoke'], // Mark as smoke test
   calendarIntent: {
     action_needed: true,
     requestor: "sarah@company.com",
@@ -112,6 +126,7 @@ Wednesday, August 6, 2025:
 
 const testSuggestTimesBusy: AshleyTestCase = {
   name: 'SuggestTimes - Busy Calendar',
+  tags: ['smoke'], // Mark as smoke test
   calendarIntent: {
     action_needed: true,
     requestor: "sarah@company.com",
@@ -230,6 +245,7 @@ Tuesday, July 29, 2025:
 
 const testExternalClientMeeting: AshleyTestCase = {
   name: 'ExternalClientMeeting - Acme Corp',
+  tags: ['smoke'], // Mark as smoke test
   calendarIntent: {
     action_needed: true,
     requestor: "Mike",
@@ -323,5 +339,14 @@ const ashleyTestCases: AshleyTestCase[] = [
   testEABookingRequestUnavailable
 ];
 
-// Run the tests
-runAllAshleyTests(); 
+// Run the tests if this file is executed directly
+if (require.main === module) {
+  // Check if smoke tests flag is passed
+  const runSmokeTests = process.argv.includes('--tags=smoke');
+  
+  if (runSmokeTests) {
+    runAllAshleyTests({ tags: ['smoke'] });
+  } else {
+    runAllAshleyTests();
+  }
+}

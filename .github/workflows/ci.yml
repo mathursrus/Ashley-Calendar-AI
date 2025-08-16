@@ -13,8 +13,32 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 jobs:
+  smoke-tests:
+    runs-on: ubuntu-latest
+    env:
+      ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
+      OPENAI_API_KEY:     ${{ secrets.OPENAI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install
+      - run: npx --yes --package @boundaryml/baml baml-cli generate
+      - run: npm run generate
+      - name: Run Smoke Tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILES="$(git ls-files -- './test-ashley.ts' || true)"
+          if [ -z "$FILES" ]; then
+            echo "No TS tests found"; exit 0
+          fi
+          npx --yes tsx --test --test-reporter tap $FILES -- --tags=smoke
+
   build-and-test:
     runs-on: ubuntu-latest
+    needs: smoke-tests
     env:
       ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
       OPENAI_API_KEY:     ${{ secrets.OPENAI_API_KEY }}
