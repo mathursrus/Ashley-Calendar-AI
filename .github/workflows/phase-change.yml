@@ -77,8 +77,8 @@ jobs:
               git push -u origin "$BRANCH_NAME"
           fi
 
-      # Design: add EMPTY RFC placeholder to guarantee a diff
-      - name: phase:design → ensure empty RFC placeholder (commit if missing)
+            # Design: add EMPTY commit to guarantee a diff
+      - name: phase:design → ensure empty commit (commit if missing)
         if: steps.current-phase.outputs.current_phase == 'phase:design'
         shell: bash
         env:
@@ -88,23 +88,9 @@ jobs:
           ISSUE_TITLE="${{ steps.issue-details.outputs.issue_title }}"
           BRANCH_NAME="${{ steps.issue-details.outputs.branch_name }}"
           
-          # Create RFC directory if it doesn't exist
-          mkdir -p docs/rfcs
-          
-          # Create RFC file if it doesn't exist
-          RFC_FILE="docs/rfcs/${ISSUE_NUMBER}-$(echo "$ISSUE_TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g').md"
-          
-          if [ ! -f "$RFC_FILE" ]; then
-            cat > "$RFC_FILE" << EOF
-          # RFC: $ISSUE_TITLE
-          
-          **Issue:** #$ISSUE_NUMBER
-          EOF
-          
-            git add "$RFC_FILE"
-            git commit -m "Create RFC stub for Issue #$ISSUE_NUMBER: $ISSUE_TITLE"
-            git push origin "$BRANCH_NAME"
-          fi
+          # Create empty commit to guarantee branch has commits
+          git commit --allow-empty -m "Design phase initiated for Issue #$ISSUE_NUMBER: $ISSUE_TITLE"
+          git push origin "$BRANCH_NAME"
           
           # Create or update Design PR
           PR_TITLE="[Design] RFC for Issue #$ISSUE_NUMBER: $ISSUE_TITLE"
@@ -219,7 +205,6 @@ jobs:
             gh pr edit "$NEW_PR" --add-label "phase:impl" --remove-label "phase:design" --remove-label "phase:tests"
           fi
 
-      - name: Normalize ISSUE and PR status to WIP (authoritative)
+      - name: Normalize ISSUE status to WIP (authoritative)
         run: |
           gh issue edit ${{ github.event.issue.number }} --add-label "status:wip" --remove-label "status:needs-review" --remove-label "status:complete" || true
-          gh pr edit "$PR" --add-label "status:wip" --remove-label "status:needs-review" --remove-label "status:complete" || true
