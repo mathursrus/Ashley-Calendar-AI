@@ -79,11 +79,10 @@ jobs:
 
       # Design: add EMPTY RFC placeholder to guarantee a diff
       - name: phase:design → ensure empty RFC placeholder (commit if missing)
-        if: steps.vars.outputs.phase == 'phase:design'
+        if: steps.current-phase.outputs.current_phase == 'phase:design'
         shell: bash
         env:
           ISSUE: ${{ github.event.issue.number }}
-          SLUG:  ${{ steps.vars.outputs.slug }}
         run: |
           ISSUE_NUMBER="${{ steps.issue-details.outputs.issue_number }}"
           ISSUE_TITLE="${{ steps.issue-details.outputs.issue_title }}"
