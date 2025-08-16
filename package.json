@@ -11,6 +11,7 @@
     "test-context": "ts-node test-context.ts",
     "test-sid-multi-participant": "ts-node test-sid-multi-participant.ts",
     "test-speech-formatter": "ts-node test-speech-formatter.ts",
+    "test-smoke": "ts-node test-smoke.ts",
     "test-calendar-data-simple": "ts-node test-calendar-data-simple.ts",
     "setup-oauth": "ts-node setup-oauth.ts",
     "orchestrator": "ts-node src/orchestrator/main.ts",

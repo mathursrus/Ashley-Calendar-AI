@@ -4,7 +4,8 @@
 # This will automatically run any new test files without needing to update package.json
 
 echo "🔍 Discovering test files..."
-test_files=$(find . -name 'test-*.ts' -not -path './node_modules/*' -not -path './dist/*' -not -path './.git/*')
+# Exclude smoke tests from full test run - they're meant for quick validation only
+test_files=$(find . -name 'test-*.ts' -not -path './node_modules/*' -not -path './dist/*' -not -path './.git/*' | grep -v test-smoke.ts)
 
 if [ -z "$test_files" ]; then
     echo "❌ No test files found matching pattern 'test-*.ts'"

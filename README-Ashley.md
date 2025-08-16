@@ -111,13 +111,30 @@ The system expects calendar data in a readable format that includes:
 
 ## Testing
 
-Run the test file to see Ashley in action:
+### Quick Validation (Smoke Tests)
+For fast feedback during development, run the smoke test suite:
+
+```bash
+npm run test-smoke
+```
+
+This runs representative tests from each test suite in under 30 seconds to validate core functionality.
+
+### Full Test Suite
+Run the complete test file to see Ashley in action:
 
 ```bash
 npm run test-ashley
 ```
 
 This will demonstrate all three action types with different scenarios.
+
+### All Tests
+Run all test suites:
+
+```bash
+npm run test
+```
 
 ## Dependencies
 
