@@ -205,6 +205,14 @@ jobs:
             gh pr edit "$NEW_PR" --add-label "phase:impl" --remove-label "phase:design" --remove-label "phase:tests"
           fi
 
-      - name: Normalize ISSUE status to WIP (authoritative)
+      - name: Normalize ISSUE and PR status to WIP (authoritative)
         run: |
           gh issue edit ${{ github.event.issue.number }} --add-label "status:wip" --remove-label "status:needs-review" --remove-label "status:complete" || true
+          
+          # Get the PR number for the current branch and normalize its status
+          BRANCH_NAME="${{ steps.issue-details.outputs.branch_name }}"
+          PR_NUMBER=$(gh pr list --head "$BRANCH_NAME" --json number --jq '.[0].number' 2>/dev/null || echo "")
+          
+          if [ -n "$PR_NUMBER" ]; then
+            gh pr edit "$PR_NUMBER" --add-label "status:wip" --remove-label "status:needs-review" --remove-label "status:complete" || true
+          fi
